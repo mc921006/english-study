@@ -1,0 +1,91 @@
+@use "../../../styles/tokens" as *;
+
+.shell {
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 clamp($space-4, 4vw, $space-8);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3;
+  font-weight: 800;
+}
+
+.brandMark {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: $radius-md;
+  color: #fff;
+  background: var(--color-accent);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+}
+
+.brandText {
+  font-size: 1rem;
+}
+
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.navigationLink,
+.navigationLinkDisabled {
+  border-radius: $radius-sm;
+  padding: $space-2 $space-3;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.navigationLink {
+  color: var(--color-muted);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.navigationLink:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.navigationLinkDisabled {
+  color: color-mix(in srgb, var(--color-muted) 55%, transparent);
+  cursor: not-allowed;
+}
+
+.main {
+  width: min(100%, 72rem);
+  margin: 0 auto;
+  padding: clamp($space-6, 5vw, $space-12) clamp($space-4, 4vw, $space-8);
+}
+
+@media (max-width: 640px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: $space-4;
+  }
+
+  .navigation {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: $space-1;
+  }
+}

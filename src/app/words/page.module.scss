@@ -1,0 +1,32 @@
+@use "../../styles/tokens" as *;
+
+.wordsPage {
+  display: grid;
+  gap: $space-8;
+}
+
+.header {
+  max-width: 44rem;
+}
+
+.kicker {
+  margin: 0 0 $space-3;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.description {
+  margin: $space-4 0 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}

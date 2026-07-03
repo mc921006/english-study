@@ -1,0 +1,44 @@
+@use "../styles/tokens" as *;
+
+.hero {
+  display: grid;
+  gap: $space-8;
+  align-items: end;
+  min-height: calc(100vh - 13rem);
+}
+
+.kicker {
+  margin: 0 0 $space-4;
+  color: var(--color-accent);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 48rem;
+  margin: 0;
+  font-size: clamp(2.25rem, 8vw, 5rem);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.description {
+  max-width: 42rem;
+  margin: $space-5 0 0;
+  color: var(--color-muted);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+.action {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  padding: $space-3 $space-5;
+  color: #fff;
+  background: var(--color-accent);
+  font-weight: 800;
+}

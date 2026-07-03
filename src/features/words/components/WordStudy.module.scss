@@ -1,0 +1,209 @@
+@use "../../../styles/tokens" as *;
+
+.study {
+  display: grid;
+  gap: $space-6;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: $space-4;
+  align-items: end;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $space-5;
+  background: var(--color-surface);
+}
+
+.controlGroup {
+  display: grid;
+  gap: $space-2;
+  min-width: 0;
+}
+
+.controlLabel {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.segmentedControl {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-surface-muted);
+}
+
+.segment,
+.segmentActive {
+  min-height: 2.5rem;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  padding: 0 $space-3;
+  color: var(--color-muted);
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.segment:last-child,
+.segmentActive:last-child {
+  border-right: 0;
+}
+
+.segmentActive {
+  color: #fff;
+  background: var(--color-accent);
+}
+
+.refreshButton,
+.navButton {
+  min-height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: 0 $space-4;
+  color: var(--color-foreground);
+  background: var(--color-surface);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.refreshButton:hover,
+.navButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.viewer {
+  display: grid;
+  gap: $space-4;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.cardButton {
+  height: min(54vh, 24rem);
+  min-height: 18rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  perspective: 1200px;
+}
+
+.card,
+.cardFlipped {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 420ms ease;
+  transform-style: preserve-3d;
+}
+
+.cardFlipped {
+  transform: rotateY(180deg);
+}
+
+.cardFaceFront,
+.cardFaceBack {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: clamp($space-6, 6vw, $space-12);
+  background: var(--color-surface);
+  box-shadow: 0 16px 44px rgba(23, 32, 51, 0.08);
+  backface-visibility: hidden;
+}
+
+.cardFaceFront {
+  background:
+    linear-gradient(135deg, var(--color-accent-soft), transparent 54%),
+    var(--color-surface);
+}
+
+.cardFaceBack {
+  gap: $space-5;
+  text-align: center;
+  transform: rotateY(180deg);
+}
+
+.word {
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.meaning {
+  font-size: clamp(1.7rem, 5vw, 3rem);
+  font-weight: 900;
+}
+
+.example {
+  max-width: 42rem;
+  color: var(--color-muted);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.7;
+}
+
+.navigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-3;
+}
+
+.navButton:disabled {
+  color: color-mix(in srgb, var(--color-muted) 55%, transparent);
+  cursor: not-allowed;
+}
+
+.empty {
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $space-8;
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+.empty p {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .segmentedControl {
+    grid-auto-flow: row;
+  }
+
+  .segment,
+  .segmentActive {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .segment:last-child,
+  .segmentActive:last-child {
+    border-bottom: 0;
+  }
+}
