@@ -18,6 +18,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# seed progress
+.seed-progress/
+
 # env files
 .env*
 

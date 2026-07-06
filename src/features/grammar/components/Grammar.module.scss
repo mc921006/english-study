@@ -1,0 +1,249 @@
+@use "../../../styles/tokens" as *;
+
+.grammarPanel,
+.detail {
+  display: grid;
+  gap: $space-5;
+}
+
+.segmentedControl {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-surface-muted);
+}
+
+.segment,
+.segmentActive {
+  min-height: 2.75rem;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  padding: 0 $space-3;
+  color: var(--color-muted);
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.segment:last-child,
+.segmentActive:last-child {
+  border-right: 0;
+}
+
+.segmentActive {
+  color: #fff;
+  background: var(--color-accent);
+}
+
+.grammarList {
+  display: grid;
+  gap: $space-3;
+}
+
+.grammarItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: $space-4;
+  align-items: start;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $space-5;
+  color: var(--color-foreground);
+  background: var(--color-surface);
+}
+
+.grammarItem:hover {
+  border-color: var(--color-accent);
+}
+
+.itemIndex {
+  display: grid;
+  min-width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.itemTitle,
+.itemDescription {
+  display: block;
+}
+
+.itemTitle {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.itemDescription {
+  margin-top: $space-2;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.empty,
+.explanation,
+.exampleBox,
+.futureActions,
+.aiResult {
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $space-5;
+  background: var(--color-surface);
+}
+
+.empty {
+  color: var(--color-muted);
+}
+
+.detailHeader {
+  display: grid;
+  gap: $space-3;
+}
+
+.kicker {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.detailHeader h1 {
+  max-width: 52rem;
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.explanation h2,
+.exampleBox h2 {
+  margin: 0 0 $space-3;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.explanation p,
+.example,
+.exampleMeaning {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.example {
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.exampleMeaning {
+  margin-top: $space-3;
+  color: var(--color-muted);
+}
+
+.aiTools {
+  display: grid;
+  gap: $space-4;
+}
+
+.futureActions,
+.detailActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+}
+
+.primaryButton,
+.secondaryButton,
+.disabledButton {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: 0 $space-4;
+  font-weight: 900;
+}
+
+.futureActions button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-accent);
+  border-radius: $radius-md;
+  padding: 0 $space-4;
+  color: var(--color-accent);
+  background: var(--color-surface);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.futureActions button:disabled,
+.disabledButton {
+  color: var(--color-muted);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+}
+
+.primaryButton {
+  border-color: var(--color-accent);
+  color: #fff;
+  background: var(--color-accent);
+}
+
+.secondaryButton {
+  color: var(--color-foreground);
+  background: var(--color-surface);
+}
+
+.error {
+  margin: 0;
+  color: #b42318;
+  font-weight: 800;
+}
+
+.aiResult h2 {
+  margin: 0 0 $space-3;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.aiResult p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.moreExampleList {
+  display: grid;
+  gap: $space-4;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+@media (max-width: 520px) {
+  .segmentedControl {
+    grid-auto-flow: row;
+  }
+
+  .segment,
+  .segmentActive {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .segment:last-child,
+  .segmentActive:last-child {
+    border-bottom: 0;
+  }
+}

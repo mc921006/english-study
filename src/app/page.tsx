@@ -13,9 +13,14 @@ export default function HomePage() {
         </p>
       </div>
 
-      <Link className={styles.action} href="/words">
-        Open words
-      </Link>
+      <div className={styles.actions}>
+        <Link className={styles.action} href="/words">
+          Open words
+        </Link>
+        <Link className={styles.actionSecondary} href="/grammar">
+          Open grammar
+        </Link>
+      </div>
     </section>
   );
 }

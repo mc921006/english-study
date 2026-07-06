@@ -114,7 +114,7 @@ export function StudyCard({
             <span className={styles.frontContent}>
               <span className={styles.word}>{word.word}</span>
               <span className={styles.pronunciation}>
-                {word.pronunciation}
+                {`[ ${word.pronunciation} ]`}
               </span>
             </span>
           </span>

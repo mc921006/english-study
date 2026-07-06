@@ -31,14 +31,30 @@
   line-height: 1.7;
 }
 
-.action {
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+}
+
+.action,
+.actionSecondary {
   display: inline-flex;
   width: fit-content;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--color-accent);
   border-radius: $radius-md;
   padding: $space-3 $space-5;
+  font-weight: 800;
+}
+
+.action {
   color: #fff;
   background: var(--color-accent);
-  font-weight: 800;
+}
+
+.actionSecondary {
+  color: var(--color-accent);
+  background: var(--color-surface);
 }
