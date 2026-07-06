@@ -18,17 +18,10 @@ export function WordStudy() {
     errorMessage,
     startStudy,
     startNewStudy,
+    returnToSetup,
     moveToPrevious,
     moveToNext,
   } = useDailyStudy();
-
-  if (status === "checking") {
-    return (
-      <div className={styles.empty}>
-        <p>Loading study...</p>
-      </div>
-    );
-  }
 
   if (status === "setup" || !study) {
     return (
@@ -64,6 +57,7 @@ export function WordStudy() {
         current={displayIndex}
         total={totalWords}
         progressPercent={progressPercent}
+        onChangeStudy={returnToSetup}
       />
       <StudyCard
         currentIndex={study.currentIndex}

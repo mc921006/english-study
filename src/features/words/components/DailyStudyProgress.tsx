@@ -6,6 +6,7 @@ type DailyStudyProgressProps = {
   current: number;
   total: number;
   progressPercent: number;
+  onChangeStudy: () => void;
 };
 
 export function DailyStudyProgress({
@@ -13,6 +14,7 @@ export function DailyStudyProgress({
   current,
   total,
   progressPercent,
+  onChangeStudy,
 }: DailyStudyProgressProps) {
   return (
     <header className={styles.studyHeader}>
@@ -20,8 +22,17 @@ export function DailyStudyProgress({
         <span className={styles.kicker}>{cefrLevel}</span>
         <h2>Today&apos;s Study</h2>
       </div>
-      <div className={styles.studyCount}>
-        {current} / {total}
+      <div className={styles.studyHeaderActions}>
+        <div className={styles.studyCount}>
+          {current} / {total}
+        </div>
+        <button
+          className={styles.ghostButton}
+          type="button"
+          onClick={onChangeStudy}
+        >
+          Change Study
+        </button>
       </div>
       <div
         className={styles.progressBar}

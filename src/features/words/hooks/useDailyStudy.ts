@@ -1,44 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { getWords } from "@/services/words";
 import type { CefrLevel } from "@/types/word";
 import {
   type DailyStudy,
   type DailyStudyCount,
   getTodayKey,
-  loadDailyStudy,
   saveDailyStudy,
 } from "../storage/dailyStudyStorage";
 
-type StudyStatus = "checking" | "setup" | "loading" | "active" | "completed";
+type StudyStatus = "setup" | "loading" | "active" | "completed";
 
 export function useDailyStudy() {
   const [study, setStudy] = useState<DailyStudy | null>(null);
-  const [status, setStatus] = useState<StudyStatus>("checking");
+  const [status, setStatus] = useState<StudyStatus>("setup");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timerId = window.setTimeout(() => {
-      const savedStudy = loadDailyStudy();
-
-      if (!savedStudy) {
-        setStatus("setup");
-        return;
-      }
-
-      setStudy(savedStudy);
-      setStatus(
-        savedStudy.currentIndex >= savedStudy.words.length
-          ? "completed"
-          : "active",
-      );
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timerId);
-    };
-  }, []);
 
   const startStudy = useCallback(
     async (cefrLevel: CefrLevel, dailyCount: DailyStudyCount) => {
@@ -83,6 +60,11 @@ export function useDailyStudy() {
 
     await startStudy(study.cefrLevel, study.dailyCount);
   }, [startStudy, study]);
+
+  const returnToSetup = useCallback(() => {
+    setStatus("setup");
+    setErrorMessage(null);
+  }, []);
 
   const updateCurrentIndex = useCallback((nextIndex: number) => {
     setStudy((currentStudy) => {
@@ -142,6 +124,7 @@ export function useDailyStudy() {
       errorMessage,
       startStudy,
       startNewStudy,
+      returnToSetup,
       moveToPrevious,
       moveToNext,
     }),
@@ -155,6 +138,7 @@ export function useDailyStudy() {
       errorMessage,
       startStudy,
       startNewStudy,
+      returnToSetup,
       moveToPrevious,
       moveToNext,
     ],

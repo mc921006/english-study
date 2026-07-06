@@ -9,12 +9,19 @@ type MoreExample = {
   example_meaning: string;
 };
 
+type EasyExplanation = {
+  paragraph: string;
+  paragraph_meaning: string;
+  explanation: string;
+};
+
 type GrammarAiToolsProps = {
   grammar: Grammar;
 };
 
 export function GrammarAiTools({ grammar }: GrammarAiToolsProps) {
-  const [easyExplanation, setEasyExplanation] = useState<string | null>(null);
+  const [easyExplanation, setEasyExplanation] =
+    useState<EasyExplanation | null>(null);
   const [moreExamples, setMoreExamples] = useState<MoreExample[]>([]);
   const [loadingAction, setLoadingAction] = useState<
     "explain" | "examples" | null
@@ -36,15 +43,26 @@ export function GrammarAiTools({ grammar }: GrammarAiToolsProps) {
         }),
       });
       const result = (await response.json()) as {
+        paragraph?: string;
+        paragraph_meaning?: string;
         explanation?: string;
         error?: string;
       };
 
-      if (!response.ok || !result.explanation) {
+      if (
+        !response.ok ||
+        !result.paragraph ||
+        !result.paragraph_meaning ||
+        !result.explanation
+      ) {
         throw new Error(result.error ?? "Failed to generate explanation.");
       }
 
-      setEasyExplanation(result.explanation);
+      setEasyExplanation({
+        paragraph: result.paragraph,
+        paragraph_meaning: result.paragraph_meaning,
+        explanation: result.explanation,
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to generate explanation.",
@@ -110,8 +128,20 @@ export function GrammarAiTools({ grammar }: GrammarAiToolsProps) {
 
       {easyExplanation ? (
         <div className={styles.aiResult}>
-          <h2>Easy Explanation</h2>
-          <p>{easyExplanation}</p>
+          <div className={styles.aiResult}>
+            <h2>예시 문단</h2>
+            <p className={styles.paragraphText}>
+              {highlightMarkedSentence(easyExplanation.paragraph)}
+            </p>
+            <p className={styles.paragraphMeaning}>
+              {easyExplanation.paragraph_meaning}
+            </p>
+          </div>
+
+          <div className={styles.aiResult}>
+            <h2>어떻게 쓰였나요?</h2>
+            <p>{easyExplanation.explanation}</p>
+          </div>
         </div>
       ) : null}
 
@@ -129,5 +159,25 @@ export function GrammarAiTools({ grammar }: GrammarAiToolsProps) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+function highlightMarkedSentence(paragraph: string) {
+  const match = paragraph.match(/\[\[(.*?)\]\]/);
+
+  if (!match || match.index === undefined) {
+    return paragraph;
+  }
+
+  const [markedText, sentence] = match;
+  const before = paragraph.slice(0, match.index);
+  const after = paragraph.slice(match.index + markedText.length);
+
+  return (
+    <>
+      {before}
+      <strong className={styles.highlightSentence}>{sentence}</strong>
+      {after}
+    </>
   );
 }

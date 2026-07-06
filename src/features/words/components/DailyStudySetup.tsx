@@ -26,30 +26,30 @@ export function DailyStudySetup({
     <section className={styles.setup} aria-label="Create daily study">
       <div className={styles.setupHeader}>
         <span className={styles.kicker}>Daily Study</span>
-        <h2>Choose today&apos;s study</h2>
+        <h2>학습 옵션 선택</h2>
       </div>
 
-      <div className={styles.controls}>
+      <div className={styles.setupSections}>
         <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>CEFR level</span>
-          <div className={styles.segmentedControl}>
+          <span className={styles.controlLabel}>CEFR 레벨</span>
+          <div className={styles.levelGrid}>
             {cefrLevelOptions.map((option) => (
               <button
                 key={option}
                 className={
-                  option === cefrLevel ? styles.segmentActive : styles.segment
+                  option === cefrLevel ? styles.levelCardActive : styles.levelCard
                 }
                 type="button"
                 onClick={() => setCefrLevel(option)}
               >
-                {option}
+                <span>{option}</span>
               </button>
             ))}
           </div>
         </div>
 
         <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>Today&apos;s words</span>
+          <span className={styles.controlLabel}>학습 개수</span>
           <div className={styles.segmentedControl}>
             {dailyCountOptions.map((option) => (
               <button
@@ -75,7 +75,7 @@ export function DailyStudySetup({
         onClick={() => onStart(cefrLevel, dailyCount)}
         disabled={isLoading}
       >
-        {isLoading ? "Creating..." : "Start Daily Study"}
+        {isLoading ? "준비 중..." : "학습 시작"}
       </button>
     </section>
   );

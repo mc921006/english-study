@@ -212,6 +212,24 @@
   font-weight: 800;
 }
 
+.aiResultGrid {
+  display: grid;
+  gap: $space-4;
+}
+
+.aiResult .aiResult {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.aiResult .aiResult + .aiResult {
+  margin-top: $space-6;
+  padding-top: $space-5;
+  border-top: 1px solid var(--color-border);
+}
+
 .aiResult h2 {
   margin: 0 0 $space-3;
   color: var(--color-muted);
@@ -222,6 +240,39 @@
 .aiResult p {
   margin: 0;
   line-height: 1.7;
+}
+
+.paragraphText {
+  color: var(--color-foreground);
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+
+.highlightSentence {
+  color: #175cd3;
+  font-weight: 900;
+}
+
+.paragraphMeaning {
+  margin-top: $space-4;
+  color: var(--color-muted);
+  line-height: 1.7;
+}
+
+.contextBlock {
+  display: grid;
+  gap: $space-2;
+}
+
+.contextBlock + .contextBlock {
+  margin-top: $space-4;
+}
+
+.contextBlock span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .moreExampleList {
