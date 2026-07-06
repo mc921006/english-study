@@ -12,8 +12,8 @@ export default function WordsPage() {
         <p className={styles.kicker}>Wordbook</p>
         <h1 className={styles.title}>Words</h1>
         <p className={styles.description}>
-          Choose a level and daily word count, then flip each card to study the
-          meaning and example sentence.
+          Choose a CEFR level and daily word count, then flip each card to study
+          the meaning and example sentence.
         </p>
       </div>
 

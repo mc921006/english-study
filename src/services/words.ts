@@ -1,15 +1,34 @@
-import { mockWords } from "@/data/mockWords";
-import type { Word, WordLevel } from "@/types/word";
+import { supabase } from "@/lib/supabase";
+import type { CefrLevel, Word } from "@/types/word";
 
 export type GetWordsParams = {
-  level: WordLevel;
-  limit: number;
+  cefrLevel: CefrLevel;
+  limit: number | "all";
 };
 
-export function getWords({ level, limit }: GetWordsParams): Word[] {
-  const wordsByLevel = mockWords.filter((word) => word.level === level);
+export async function getWords({
+  cefrLevel,
+  limit,
+}: GetWordsParams): Promise<Word[]> {
+  const { data, error } = await supabase
+    .from("words")
+    .select(
+      "word, meaning, example, example_meaning, pronunciation, part_of_speech, cefr_level",
+    )
+    .eq("cefr_level", cefrLevel)
+    .limit(1000);
 
-  return shuffleWords(wordsByLevel).slice(0, limit);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const shuffledWords = shuffleWords((data ?? []) as Word[]);
+
+  if (limit === "all") {
+    return shuffledWords;
+  }
+
+  return shuffledWords.slice(0, limit);
 }
 
 function shuffleWords(words: Word[]): Word[] {
