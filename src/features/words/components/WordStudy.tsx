@@ -35,10 +35,7 @@ export function WordStudy() {
 
   if (status === "completed") {
     return (
-      <StudyCompletion
-        isLoading={false}
-        onStartNewStudy={startNewStudy}
-      />
+      <StudyCompletion isLoading={false} onStartNewStudy={startNewStudy} />
     );
   }
 

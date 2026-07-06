@@ -20,6 +20,9 @@ export default function HomePage() {
         <Link className={styles.actionSecondary} href="/grammar">
           Open grammar
         </Link>
+        <Link className={styles.actionSecondary} href="/conversation">
+          Open conversation
+        </Link>
       </div>
     </section>
   );

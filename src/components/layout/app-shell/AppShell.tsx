@@ -4,7 +4,7 @@ import styles from "./AppShell.module.scss";
 const navigationItems = [
   { href: "/words", label: "Words", available: true },
   { href: "/grammar", label: "Grammar", available: true },
-  { href: "/conversation", label: "Conversation", available: false },
+  { href: "/conversation", label: "Conversation", available: true },
 ];
 
 type AppShellProps = Readonly<{
