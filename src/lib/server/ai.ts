@@ -25,6 +25,8 @@ export async function generateJsonWithAI({
   messages,
   responseFormat,
   maxTokens = 1200,
+  requireOpenAI = false,
+  requireOpenRouter = false,
 }: {
   messages: Array<{
     role: "system" | "user";
@@ -32,15 +34,17 @@ export async function generateJsonWithAI({
   }>;
   responseFormat: JsonSchemaFormat;
   maxTokens?: number;
+  requireOpenAI?: boolean;
+  requireOpenRouter?: boolean;
 }) {
-  const aiClient = getAIClient();
+  const aiClient = getAIClient({ requireOpenAI, requireOpenRouter });
   const response = await fetch(aiClient.endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${aiClient.apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "https://localhost",
-      "X-Title": "english-study grammar tools",
+      "X-Title": "english-study ai tools",
     },
     body: JSON.stringify({
       model: aiClient.model,
@@ -86,7 +90,29 @@ export async function generateJsonWithAI({
   return JSON.parse(outputText) as unknown;
 }
 
-function getAIClient() {
+function getAIClient({
+  requireOpenAI,
+  requireOpenRouter,
+}: {
+  requireOpenAI: boolean;
+  requireOpenRouter: boolean;
+}) {
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+
+  if (requireOpenRouter) {
+    if (!openRouterKey) {
+      throw new Error("OPENROUTER_API_KEY is required.");
+    }
+
+    return {
+      apiKey: openRouterKey,
+      endpoint: "https://openrouter.ai/api/v1/chat/completions",
+      model: process.env.OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL,
+      providerName: "OpenRouter",
+      usesOpenRouter: true,
+    };
+  }
+
   const openAIKey = process.env.OPENAI_API_KEY;
   if (openAIKey) {
     return {
@@ -98,7 +124,10 @@ function getAIClient() {
     };
   }
 
-  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (requireOpenAI) {
+    throw new Error("OPENAI_API_KEY is required.");
+  }
+
   if (openRouterKey) {
     return {
       apiKey: openRouterKey,

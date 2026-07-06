@@ -24,11 +24,14 @@ export function ConversationPractice() {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] =
     useState<ConversationQuestion | null>(null);
-  const [turns, setTurns] = useState<ConversationTurn[]>([]);
+  const [latestTurn, setLatestTurn] = useState<ConversationTurn | null>(null);
+  const [pendingNextQuestion, setPendingNextQuestion] =
+    useState<ConversationQuestion | null>(null);
   const [isQuestionLoading, setIsQuestionLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const latestQuestionRequestId = useRef(0);
+  const latestAnswerRequestId = useRef(0);
 
   const selectedTopic = selectedTopicId ? findTopic(selectedTopicId) : undefined;
 
@@ -37,6 +40,8 @@ export function ConversationPractice() {
     latestQuestionRequestId.current = requestId;
 
     setCurrentQuestion(null);
+    setLatestTurn(null);
+    setPendingNextQuestion(null);
     setErrorMessage(null);
     setIsQuestionLoading(true);
 
@@ -73,7 +78,7 @@ export function ConversationPractice() {
     }
 
     setSelectedTopicId(nextTopic.id);
-    setTurns([]);
+    latestAnswerRequestId.current += 1;
     void loadFirstQuestion(nextTopic);
   }
 
@@ -82,15 +87,17 @@ export function ConversationPractice() {
       return;
     }
 
-    setTurns([]);
+    latestAnswerRequestId.current += 1;
     void loadFirstQuestion(selectedTopic);
   }
 
   async function submitUserAnswer(answer: string) {
-    if (!selectedTopic || !currentQuestion) {
+    if (!selectedTopic || !currentQuestion || pendingNextQuestion) {
       return false;
     }
 
+    const requestId = latestAnswerRequestId.current + 1;
+    latestAnswerRequestId.current = requestId;
     setErrorMessage(null);
     setIsSubmitting(true);
 
@@ -100,17 +107,26 @@ export function ConversationPractice() {
         question: currentQuestion,
         answer,
       });
+
+      if (latestAnswerRequestId.current !== requestId) {
+        return false;
+      }
+
       const nextTurn: ConversationTurn = {
-        id: `${selectedTopic.id}-${turns.length + 1}`,
+        id: `${currentQuestion.id}-answer`,
         question: currentQuestion,
         answer,
         feedback: result.feedback,
       };
 
-      setTurns((currentTurns) => [...currentTurns, nextTurn]);
-      setCurrentQuestion(result.nextQuestion);
+      setLatestTurn(nextTurn);
+      setPendingNextQuestion(result.nextQuestion);
       return true;
     } catch (error) {
+      if (latestAnswerRequestId.current !== requestId) {
+        return false;
+      }
+
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -118,8 +134,21 @@ export function ConversationPractice() {
       );
       return false;
     } finally {
-      setIsSubmitting(false);
+      if (latestAnswerRequestId.current === requestId) {
+        setIsSubmitting(false);
+      }
     }
+  }
+
+  function moveToNextQuestion() {
+    if (!pendingNextQuestion) {
+      return;
+    }
+
+    setCurrentQuestion(pendingNextQuestion);
+    setLatestTurn(null);
+    setPendingNextQuestion(null);
+    setErrorMessage(null);
   }
 
   return (
@@ -153,14 +182,18 @@ export function ConversationPractice() {
 
             <ConversationThread
               currentQuestion={currentQuestion}
+              hasPendingNextQuestion={Boolean(pendingNextQuestion)}
               isLoadingQuestion={isQuestionLoading}
-              turns={turns}
+              latestTurn={latestTurn}
+              onNextQuestion={moveToNextQuestion}
             />
-            <ConversationComposer
-              disabled={!currentQuestion || isQuestionLoading}
-              isSubmitting={isSubmitting}
-              onSubmit={submitUserAnswer}
-            />
+            {!pendingNextQuestion ? (
+              <ConversationComposer
+                disabled={!currentQuestion || isQuestionLoading}
+                isSubmitting={isSubmitting}
+                onSubmit={submitUserAnswer}
+              />
+            ) : null}
           </>
         ) : (
           <div className={styles.emptyPanel}>

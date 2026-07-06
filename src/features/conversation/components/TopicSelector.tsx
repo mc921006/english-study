@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectCardGrid } from "@/components/ui/select-card-grid/SelectCardGrid";
 import type { ConversationTopic } from "@/types/conversation";
 import styles from "./Conversation.module.scss";
 
@@ -14,6 +15,13 @@ export function TopicSelector({
   topics,
   onSelectTopic,
 }: TopicSelectorProps) {
+  const topicItems = topics.map((topic) => ({
+    value: topic.id,
+    eyebrow: topic.subtitle,
+    title: topic.title,
+    description: topic.description,
+  }));
+
   return (
     <aside className={styles.topicPanel} aria-label="Conversation topics">
       <div className={styles.panelHeader}>
@@ -21,26 +29,12 @@ export function TopicSelector({
         <h2>Choose a topic</h2>
       </div>
 
-      <div className={styles.topicList}>
-        {topics.map((topic) => {
-          const isSelected = topic.id === selectedTopicId;
-
-          return (
-            <button
-              className={isSelected ? styles.topicCardActive : styles.topicCard}
-              key={topic.id}
-              type="button"
-              onClick={() => onSelectTopic(topic.id)}
-            >
-              <span className={styles.topicSubtitle}>{topic.subtitle}</span>
-              <span className={styles.topicTitle}>{topic.title}</span>
-              <span className={styles.topicDescription}>
-                {topic.description}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <SelectCardGrid
+        ariaLabel="Conversation topics"
+        items={topicItems}
+        selectedValue={selectedTopicId ?? ""}
+        onSelect={onSelectTopic}
+      />
     </aside>
   );
 }

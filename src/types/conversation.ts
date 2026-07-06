@@ -3,7 +3,6 @@ export type ConversationTopic = {
   title: string;
   subtitle: string;
   description: string;
-  starterQuestion: string;
 };
 
 export type ConversationQuestion = {
@@ -13,16 +12,15 @@ export type ConversationQuestion = {
   turnIndex: number;
 };
 
-export type ConversationCorrection = {
-  before: string;
-  after: string;
-  noteKo: string;
-};
-
 export type ConversationFeedback = {
-  summaryKo: string;
-  tipKo: string;
-  correction?: ConversationCorrection;
+  goodPoint: string;
+  grammarCorrection: string;
+  vocabularyCorrection: string | null;
+  correctedSentence: string;
+  betterExpression: string;
+  koreanExplanation: string;
+  nextTip: string;
+  nextQuestion: string;
 };
 
 export type SubmitConversationAnswerRequest = {

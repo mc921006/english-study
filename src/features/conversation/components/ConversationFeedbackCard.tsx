@@ -3,44 +3,51 @@ import styles from "./Conversation.module.scss";
 
 type ConversationFeedbackCardProps = Readonly<{
   feedback: ConversationFeedback;
-  turnNumber: number;
 }>;
 
 export function ConversationFeedbackCard({
   feedback,
-  turnNumber,
 }: ConversationFeedbackCardProps) {
   return (
     <article className={styles.feedbackCard}>
       <div className={styles.feedbackHeader}>
         <span className={styles.kicker}>Feedback</span>
-        <h3>{turnNumber}번째 답변 평가</h3>
+        <h3>AI 영어 선생님 피드백</h3>
+      </div>
+
+      <div className={styles.feedbackGrid}>
+        <div className={styles.feedbackSection}>
+          <span>잘한 점</span>
+          <p>{feedback.goodPoint}</p>
+        </div>
+        <div className={styles.feedbackSection}>
+          <span>문법 교정</span>
+          <p>{feedback.grammarCorrection}</p>
+        </div>
+        {feedback.vocabularyCorrection ? (
+          <div className={styles.feedbackSection}>
+            <span>표현 교정</span>
+            <p>{feedback.vocabularyCorrection}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className={styles.expressionBox}>
+        <span>Corrected sentence</span>
+        <p className={styles.expressionAfter}>{feedback.correctedSentence}</p>
+        <span>Better expression</span>
+        <p className={styles.expressionAfter}>{feedback.betterExpression}</p>
       </div>
 
       <div className={styles.feedbackSection}>
-        <span>짧은 피드백</span>
-        <p>{feedback.summaryKo}</p>
+        <span>왜 이렇게 말하나요?</span>
+        <p>{feedback.koreanExplanation}</p>
       </div>
 
       <div className={styles.feedbackSection}>
         <span>다음 답변 팁</span>
-        <p>{feedback.tipKo}</p>
+        <p>{feedback.nextTip}</p>
       </div>
-
-      {feedback.correction ? (
-        <div className={styles.expressionBox}>
-          <span>교정 문장</span>
-          <p className={styles.expressionBefore}>
-            {feedback.correction.before}
-          </p>
-          <p className={styles.expressionAfter}>
-            {feedback.correction.after}
-          </p>
-          <p className={styles.expressionNote}>
-            {feedback.correction.noteKo}
-          </p>
-        </div>
-      ) : null}
     </article>
   );
 }

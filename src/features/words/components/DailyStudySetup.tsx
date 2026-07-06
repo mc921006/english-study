@@ -1,12 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import {
+  SelectCardGrid,
+  type SelectCardGridItem,
+} from "@/components/ui/select-card-grid/SelectCardGrid";
 import type { CefrLevel } from "@/types/word";
 import type { DailyStudyCount } from "../storage/dailyStudyStorage";
 import styles from "./WordStudy.module.scss";
 
 const cefrLevelOptions: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
-const dailyCountOptions: DailyStudyCount[] = [5, 10, 15, 20, "all"];
+const cefrLevelItems: Array<SelectCardGridItem<CefrLevel>> =
+  cefrLevelOptions.map((level) => ({
+    value: level,
+    title: level,
+  }));
+const dailyCountItems: Array<SelectCardGridItem<DailyStudyCount>> = [
+  { value: 5, title: "5" },
+  { value: 10, title: "10" },
+  { value: 15, title: "15" },
+  { value: 20, title: "20" },
+  { value: "all", title: "All" },
+];
 
 type DailyStudySetupProps = {
   errorMessage: string | null;
@@ -32,38 +47,22 @@ export function DailyStudySetup({
       <div className={styles.setupSections}>
         <div className={styles.controlGroup}>
           <span className={styles.controlLabel}>CEFR 레벨</span>
-          <div className={styles.levelGrid}>
-            {cefrLevelOptions.map((option) => (
-              <button
-                key={option}
-                className={
-                  option === cefrLevel ? styles.levelCardActive : styles.levelCard
-                }
-                type="button"
-                onClick={() => setCefrLevel(option)}
-              >
-                <span>{option}</span>
-              </button>
-            ))}
-          </div>
+          <SelectCardGrid
+            ariaLabel="CEFR level"
+            items={cefrLevelItems}
+            selectedValue={cefrLevel}
+            onSelect={setCefrLevel}
+          />
         </div>
 
         <div className={styles.controlGroup}>
           <span className={styles.controlLabel}>학습 개수</span>
-          <div className={styles.segmentedControl}>
-            {dailyCountOptions.map((option) => (
-              <button
-                key={option}
-                className={
-                  option === dailyCount ? styles.segmentActive : styles.segment
-                }
-                type="button"
-                onClick={() => setDailyCount(option)}
-              >
-                {option === "all" ? "All" : option}
-              </button>
-            ))}
-          </div>
+          <SelectCardGrid
+            ariaLabel="Daily word count"
+            items={dailyCountItems}
+            selectedValue={dailyCount}
+            onSelect={setDailyCount}
+          />
         </div>
       </div>
 

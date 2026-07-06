@@ -1,19 +1,9 @@
 import type {
-  ConversationFeedback,
   ConversationQuestion,
   ConversationTopic,
   SubmitConversationAnswerRequest,
   SubmitConversationAnswerResult,
 } from "@/types/conversation";
-import { getMockAnswerEvaluation } from "../data/conversationDummyData";
-
-const MOCK_DELAY_MS = 180;
-
-function waitForMockResponse() {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, MOCK_DELAY_MS);
-  });
-}
 
 function createQuestion(
   topic: ConversationTopic,
@@ -28,28 +18,24 @@ function createQuestion(
   };
 }
 
-function validateAnswer(answer: string) {
-  const normalizedAnswer = answer.trim();
-
-  if (!normalizedAnswer) {
-    throw new Error("영어 답변을 입력해주세요.");
-  }
-
-  if (!/[A-Za-z]/.test(normalizedAnswer)) {
-    throw new Error("영어 알파벳이 포함된 문장으로 답변해주세요.");
-  }
-
-  if (normalizedAnswer.split(/\s+/).length < 2) {
-    throw new Error("두 단어 이상으로 조금 더 자세히 답변해주세요.");
-  }
-}
-
 export async function getConversationQuestion(
   topic: ConversationTopic,
 ): Promise<ConversationQuestion> {
-  await waitForMockResponse();
+  const response = await fetch("/api/conversation/question", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ topic }),
+  });
+  const result = (await response.json()) as {
+    question?: string;
+    error?: string;
+  };
 
-  return createQuestion(topic, topic.starterQuestion, 0);
+  if (!response.ok || !result.question) {
+    throw new Error(result.error ?? "질문을 생성하지 못했습니다.");
+  }
+
+  return createQuestion(topic, result.question, 0);
 }
 
 export async function submitAnswer({
@@ -57,21 +43,32 @@ export async function submitAnswer({
   question,
   answer,
 }: SubmitConversationAnswerRequest): Promise<SubmitConversationAnswerResult> {
-  await waitForMockResponse();
-  validateAnswer(answer);
+  const response = await fetch("/api/conversation/answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic,
+      question,
+      answer,
+    }),
+  });
+  const result = (await response.json()) as
+    | { feedback?: SubmitConversationAnswerResult["feedback"] }
+    | { error?: string };
 
-  const mockEvaluation = getMockAnswerEvaluation(topic.id, question.turnIndex);
-  const feedback: ConversationFeedback = {
-    summaryKo: mockEvaluation.summaryKo,
-    tipKo: mockEvaluation.tipKo,
-    correction: mockEvaluation.correction,
-  };
+  if (!response.ok || !("feedback" in result) || !result.feedback) {
+    throw new Error(
+      "error" in result && result.error
+        ? result.error
+        : "답변을 확인하지 못했습니다.",
+    );
+  }
 
   return {
-    feedback,
+    feedback: result.feedback,
     nextQuestion: createQuestion(
       topic,
-      mockEvaluation.nextQuestion,
+      result.feedback.nextQuestion,
       question.turnIndex + 1,
     ),
   };

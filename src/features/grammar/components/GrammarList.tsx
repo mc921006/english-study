@@ -2,12 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  SelectCardGrid,
+  type SelectCardGridItem,
+} from "@/components/ui/select-card-grid/SelectCardGrid";
 import { getGrammarByLevel } from "@/services/grammar";
 import type { Grammar } from "@/types/grammar";
 import type { CefrLevel } from "@/types/word";
 import styles from "./Grammar.module.scss";
 
 const cefrLevelOptions: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const cefrLevelItems: Array<SelectCardGridItem<CefrLevel>> =
+  cefrLevelOptions.map((level) => ({
+    value: level,
+    title: level,
+  }));
 
 export function GrammarList() {
   const [cefrLevel, setCefrLevel] = useState<CefrLevel>("A1");
@@ -54,20 +63,12 @@ export function GrammarList() {
 
   return (
     <section className={styles.grammarPanel} aria-label="Grammar list">
-      <div className={styles.segmentedControl}>
-        {cefrLevelOptions.map((option) => (
-          <button
-            key={option}
-            className={
-              option === cefrLevel ? styles.segmentActive : styles.segment
-            }
-            type="button"
-            onClick={() => setCefrLevel(option)}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
+      <SelectCardGrid
+        ariaLabel="Grammar CEFR level"
+        items={cefrLevelItems}
+        selectedValue={cefrLevel}
+        onSelect={setCefrLevel}
+      />
 
       {isLoading ? (
         <div className={styles.empty}>Loading grammar...</div>

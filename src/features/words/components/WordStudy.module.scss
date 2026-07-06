@@ -68,63 +68,6 @@
   font-weight: 800;
 }
 
-.segmentedControl {
-  display: grid;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-md;
-  background: var(--color-surface-muted);
-}
-
-.segment,
-.segmentActive {
-  min-height: 2.5rem;
-  border: 0;
-  border-right: 1px solid var(--color-border);
-  padding: 0 $space-3;
-  color: var(--color-muted);
-  background: transparent;
-  font-size: 0.88rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.segment:last-child,
-.segmentActive:last-child {
-  border-right: 0;
-}
-
-.segmentActive {
-  color: #fff;
-  background: var(--color-accent);
-}
-
-.levelGrid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: $space-3;
-}
-
-.levelCard,
-.levelCardActive {
-  min-height: 4rem;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-md;
-  color: var(--color-foreground);
-  background: var(--color-surface);
-  font-size: 1.05rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.levelCardActive {
-  border-color: var(--color-accent);
-  color: #fff;
-  background: var(--color-accent);
-}
-
 .primaryButton,
 .navButton,
 .ghostButton {
@@ -462,36 +405,11 @@
     grid-template-columns: 1fr;
   }
 
-  .levelGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .primaryButton {
     justify-self: stretch;
   }
 
   .studyHeaderActions {
     justify-content: flex-start;
-  }
-}
-
-@media (max-width: 520px) {
-  .segmentedControl {
-    grid-auto-flow: row;
-  }
-
-  .segment,
-  .segmentActive {
-    border-right: 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .segment:last-child,
-  .segmentActive:last-child {
-    border-bottom: 0;
-  }
-
-  .levelGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

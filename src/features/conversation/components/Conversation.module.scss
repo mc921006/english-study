@@ -62,52 +62,6 @@
   text-transform: uppercase;
 }
 
-.topicList {
-  display: grid;
-  gap: $space-3;
-}
-
-.topicCard,
-.topicCardActive {
-  display: grid;
-  gap: $space-2;
-  width: 100%;
-  min-height: 6.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-md;
-  padding: $space-4;
-  text-align: left;
-  background: var(--color-surface);
-  cursor: pointer;
-}
-
-.topicCard:hover {
-  border-color: var(--color-accent);
-}
-
-.topicCardActive {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-
-.topicSubtitle {
-  color: var(--color-accent);
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-
-.topicTitle {
-  color: var(--color-foreground);
-  font-size: 1rem;
-  font-weight: 900;
-}
-
-.topicDescription {
-  color: var(--color-muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
 .practicePanel {
   display: grid;
   gap: $space-5;
@@ -124,12 +78,12 @@
 
 .thread {
   display: grid;
-  gap: $space-4;
+  gap: $space-3;
 }
 
 .turn {
   display: grid;
-  gap: $space-4;
+  gap: $space-3;
 }
 
 .aiMessage,
@@ -139,7 +93,7 @@
   max-width: min(100%, 42rem);
   border: 1px solid var(--color-border);
   border-radius: $radius-lg;
-  padding: $space-4;
+  padding: $space-3 $space-4;
 }
 
 .aiMessage {
@@ -167,18 +121,23 @@
   color: var(--color-foreground);
   font-size: 1rem;
   font-weight: 700;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .feedbackCard {
   display: grid;
-  gap: $space-4;
-  padding: $space-5;
+  gap: $space-3;
+  padding: $space-4;
+}
+
+.feedbackGrid {
+  display: grid;
+  gap: $space-3;
 }
 
 .feedbackSection {
   display: grid;
-  gap: $space-2;
+  gap: $space-1;
 }
 
 .feedbackSection span,
@@ -192,20 +151,15 @@
 .feedbackSection p,
 .expressionBox p {
   margin: 0;
-  line-height: 1.7;
+  line-height: 1.55;
 }
 
 .expressionBox {
   display: grid;
-  gap: $space-2;
+  gap: $space-1 $space-3;
   border-radius: $radius-md;
-  padding: $space-4;
+  padding: $space-3;
   background: var(--color-accent-soft);
-}
-
-.expressionBefore {
-  color: var(--color-muted);
-  text-decoration: line-through;
 }
 
 .expressionAfter {
@@ -321,9 +275,6 @@
     grid-template-columns: 1fr;
   }
 
-  .topicList {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 640px) {
@@ -336,14 +287,19 @@
     justify-self: stretch;
   }
 
-  .topicList {
-    grid-template-columns: 1fr;
-  }
-
   .topicPanel,
   .practicePanel,
   .emptyPanel,
   .feedbackCard {
     padding: $space-4;
+  }
+
+  .aiMessage,
+  .userMessage {
+    padding: $space-3;
+  }
+
+  .feedbackCard {
+    gap: $space-3;
   }
 }

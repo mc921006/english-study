@@ -7,8 +7,10 @@ import styles from "./Conversation.module.scss";
 
 type ConversationThreadProps = Readonly<{
   currentQuestion: ConversationQuestion | null;
+  hasPendingNextQuestion?: boolean;
   isLoadingQuestion?: boolean;
-  turns: ConversationTurn[];
+  latestTurn: ConversationTurn | null;
+  onNextQuestion: () => void;
 }>;
 
 type ChatMessageProps = Readonly<{
@@ -28,26 +30,33 @@ function ChatMessage({ speaker, text, variant = "ai" }: ChatMessageProps) {
 
 export function ConversationThread({
   currentQuestion,
+  hasPendingNextQuestion = false,
   isLoadingQuestion = false,
-  turns,
+  latestTurn,
+  onNextQuestion,
 }: ConversationThreadProps) {
   return (
     <div className={styles.thread} aria-live="polite">
-      {turns.map((turn, index) => (
-        <div className={styles.turn} key={turn.id}>
-          <ChatMessage speaker="AI" text={turn.question.text} />
-          <ChatMessage speaker="You" text={turn.answer} variant="user" />
-          <ConversationFeedbackCard
-            feedback={turn.feedback}
-            turnNumber={index + 1}
-          />
-        </div>
-      ))}
-
       {isLoadingQuestion ? (
         <ChatMessage speaker="AI" text="Generating a question..." />
       ) : currentQuestion ? (
         <ChatMessage speaker="AI" text={currentQuestion.text} />
+      ) : null}
+
+      {latestTurn ? (
+        <div className={styles.turn}>
+          <ChatMessage speaker="You" text={latestTurn.answer} variant="user" />
+          <ConversationFeedbackCard feedback={latestTurn.feedback} />
+          {hasPendingNextQuestion ? (
+            <button
+              className={styles.primaryButton}
+              type="button"
+              onClick={onNextQuestion}
+            >
+              Next question
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

@@ -1,0 +1,81 @@
+@use "../../../styles/tokens" as *;
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: $space-3;
+}
+
+.card,
+.cardActive {
+  display: grid;
+  width: 100%;
+  min-height: 6.5rem;
+  align-content: start;
+  gap: $space-2;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: $space-4;
+  color: var(--color-foreground);
+  text-align: left;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--color-accent);
+}
+
+.cardActive {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.eyebrow {
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.title {
+  color: var(--color-foreground);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.description {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-2;
+  }
+
+  .card,
+  .cardActive {
+    min-height: 4.75rem;
+    align-content: center;
+    gap: $space-1;
+    padding: $space-3 $space-2;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-size: 0.72rem;
+  }
+
+  .title {
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .description {
+    display: none;
+  }
+}

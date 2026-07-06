@@ -6,39 +6,6 @@
   gap: $space-5;
 }
 
-.segmentedControl {
-  display: grid;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-md;
-  background: var(--color-surface-muted);
-}
-
-.segment,
-.segmentActive {
-  min-height: 2.75rem;
-  border: 0;
-  border-right: 1px solid var(--color-border);
-  padding: 0 $space-3;
-  color: var(--color-muted);
-  background: transparent;
-  font-size: 0.9rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.segment:last-child,
-.segmentActive:last-child {
-  border-right: 0;
-}
-
-.segmentActive {
-  color: #fff;
-  background: var(--color-accent);
-}
-
 .grammarList {
   display: grid;
   gap: $space-3;
@@ -280,21 +247,4 @@
   gap: $space-4;
   margin: 0;
   padding-left: 1.25rem;
-}
-
-@media (max-width: 520px) {
-  .segmentedControl {
-    grid-auto-flow: row;
-  }
-
-  .segment,
-  .segmentActive {
-    border-right: 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .segment:last-child,
-  .segmentActive:last-child {
-    border-bottom: 0;
-  }
 }
