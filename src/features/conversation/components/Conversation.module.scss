@@ -2,8 +2,8 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr);
-  gap: $space-5;
+  grid-template-columns: minmax(18rem, 20rem) minmax(0, 1fr);
+  gap: $space-6;
   align-items: start;
 }
 
@@ -19,7 +19,7 @@
 .topicPanel {
   display: grid;
   gap: $space-5;
-  padding: $space-5;
+  padding: $space-6;
 }
 
 .panelHeader,
@@ -66,7 +66,7 @@
   display: grid;
   gap: $space-5;
   min-width: 0;
-  padding: $space-5;
+  padding: $space-6;
 }
 
 .practiceHeader {
@@ -270,14 +270,12 @@
   padding: $space-8;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 768px) {
   .workspace {
     grid-template-columns: 1fr;
+    gap: $space-5;
   }
 
-}
-
-@media (max-width: 640px) {
   .practiceHeader {
     grid-template-columns: 1fr;
   }

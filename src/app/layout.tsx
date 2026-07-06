@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/app-shell/AppShell";
+import { LanguageProvider } from "@/features/language/context/LanguageProvider";
 import "./globals.scss";
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <AppShell>{children}</AppShell>
+        <LanguageProvider>
+          <AppShell>{children}</AppShell>
+        </LanguageProvider>
       </body>
     </html>
   );

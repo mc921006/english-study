@@ -1,8 +1,8 @@
-import type { CefrLevel } from "@/types/word";
+import { commonWordLevel, type WordStudyLevel } from "@/types/word";
 import styles from "./WordStudy.module.scss";
 
 type DailyStudyProgressProps = {
-  cefrLevel: CefrLevel;
+  cefrLevel: WordStudyLevel;
   current: number;
   total: number;
   progressPercent: number;
@@ -19,7 +19,7 @@ export function DailyStudyProgress({
   return (
     <header className={styles.studyHeader}>
       <div>
-        <span className={styles.kicker}>{cefrLevel}</span>
+        <span className={styles.kicker}>{getStudyLevelLabel(cefrLevel)}</span>
         <h2>Today&apos;s Study</h2>
       </div>
       <div className={styles.studyHeaderActions}>
@@ -46,4 +46,8 @@ export function DailyStudyProgress({
       </div>
     </header>
   );
+}
+
+function getStudyLevelLabel(level: WordStudyLevel) {
+  return level === commonWordLevel ? "Common" : level;
 }

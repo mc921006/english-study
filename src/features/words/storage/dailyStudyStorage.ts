@@ -1,10 +1,18 @@
-import type { CefrLevel, Word } from "@/types/word";
+import {
+  defaultWordLanguage,
+  getDefaultWordStudyLevel,
+  isWordStudyLevel,
+  type Word,
+  type WordLanguage,
+  type WordStudyLevel,
+} from "@/types/word";
 
 export type DailyStudyCount = 5 | 10 | 15 | 20 | "all";
 
 export type DailyStudy = {
   date: string;
-  cefrLevel: CefrLevel;
+  language: WordLanguage;
+  cefrLevel: WordStudyLevel;
   dailyCount: DailyStudyCount;
   words: Word[];
   currentIndex: number;
@@ -31,7 +39,7 @@ export function loadDailyStudy(today = getTodayKey()): DailyStudy | null {
   }
 
   try {
-    const study = JSON.parse(rawStudy) as DailyStudy;
+    const study = withDefaultLanguage(JSON.parse(rawStudy));
 
     if (study.date !== today || !isValidStudy(study)) {
       clearDailyStudy();
@@ -64,9 +72,40 @@ export function clearDailyStudy() {
 function isValidStudy(study: DailyStudy) {
   return (
     typeof study.date === "string" &&
-    typeof study.cefrLevel === "string" &&
+    isWordLanguage(study.language) &&
+    isWordStudyLevel(study.cefrLevel) &&
     Array.isArray(study.words) &&
     Number.isInteger(study.currentIndex) &&
     study.currentIndex >= 0
   );
+}
+
+export function getDefaultDailyStudyLanguage() {
+  return defaultWordLanguage;
+}
+
+function withDefaultLanguage(value: unknown): DailyStudy {
+  if (!value || typeof value !== "object") {
+    return {
+      date: "",
+      language: defaultWordLanguage,
+      cefrLevel: getDefaultWordStudyLevel(defaultWordLanguage),
+      dailyCount: 5,
+      words: [],
+      currentIndex: 0,
+    };
+  }
+
+  const study = value as Partial<DailyStudy>;
+
+  return {
+    ...study,
+    language: isWordLanguage(study.language)
+      ? study.language
+      : defaultWordLanguage,
+  } as DailyStudy;
+}
+
+function isWordLanguage(value: unknown): value is WordLanguage {
+  return value === "en" || value === "vi";
 }

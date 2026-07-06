@@ -67,6 +67,7 @@ export function GrammarList() {
         ariaLabel="Grammar CEFR level"
         items={cefrLevelItems}
         selectedValue={cefrLevel}
+        variant="compact"
         onSelect={setCefrLevel}
       />
 

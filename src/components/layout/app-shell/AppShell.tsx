@@ -1,42 +1,48 @@
-import Link from "next/link";
-import styles from "./AppShell.module.scss";
+"use client";
 
-const navigationItems = [
-  { href: "/words", label: "Words", available: true },
-  { href: "/grammar", label: "Grammar", available: true },
-  { href: "/conversation", label: "Conversation", available: true },
-];
+import Link from "next/link";
+import { LanguageMenu } from "@/features/language/components/language-menu/LanguageMenu";
+import {
+  getAvailableStudyFeatures,
+} from "@/features/language/languageConfig";
+import { useStudyLanguage } from "@/features/language/context/LanguageProvider";
+import styles from "./AppShell.module.scss";
 
 type AppShellProps = Readonly<{
   children: React.ReactNode;
 }>;
 
 export function AppShell({ children }: AppShellProps) {
+  const { language, languageId } = useStudyLanguage();
+  const navigationItems = getAvailableStudyFeatures(languageId);
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="English Study home">
-          <span className={styles.brandMark}>ES</span>
-          <span className={styles.brandText}>English Study</span>
-        </Link>
+        <div className={styles.brand}>
+          <LanguageMenu />
+          <Link
+            className={styles.brandLink}
+            href="/"
+            aria-label={`${language.studyTitle} home`}
+          >
+            <span className={styles.brandText}>{language.studyTitle}</span>
+          </Link>
+        </div>
 
-        <nav className={styles.navigation} aria-label="Primary navigation">
-          {navigationItems.map((item) =>
-            item.available ? (
-              <Link key={item.href} className={styles.navigationLink} href={item.href}>
-                {item.label}
-              </Link>
-            ) : (
-              <span
+        <div className={styles.headerActions}>
+          <nav className={styles.navigation} aria-label="Primary navigation">
+            {navigationItems.map((item) => (
+              <Link
                 key={item.href}
-                className={styles.navigationLinkDisabled}
-                aria-disabled="true"
+                className={styles.navigationLink}
+                href={item.href}
               >
                 {item.label}
-              </span>
-            ),
-          )}
-        </nav>
+              </Link>
+            ))}
+          </nav>
+        </div>
       </header>
 
       <main className={styles.main}>{children}</main>

@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { HomeStudyActions } from "@/features/language/components/HomeStudyActions";
+import { LanguageSelector } from "@/features/language/components/LanguageSelector";
 import styles from "./page.module.scss";
 
 export default function HomePage() {
@@ -13,17 +14,8 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className={styles.actions}>
-        <Link className={styles.action} href="/words">
-          Open words
-        </Link>
-        <Link className={styles.actionSecondary} href="/grammar">
-          Open grammar
-        </Link>
-        <Link className={styles.actionSecondary} href="/conversation">
-          Open conversation
-        </Link>
-      </div>
+      <LanguageSelector />
+      <HomeStudyActions />
     </section>
   );
 }

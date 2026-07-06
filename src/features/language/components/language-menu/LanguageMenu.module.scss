@@ -1,0 +1,77 @@
+@use "../../../../styles/tokens" as *;
+
+.menu {
+  position: relative;
+}
+
+.trigger {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid var(--color-accent);
+  border-radius: $radius-md;
+  color: #fff;
+  background: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  outline: none;
+}
+
+.popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + #{$space-2});
+  left: 0;
+  display: grid;
+  min-width: 12rem;
+  gap: $space-1;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: $space-2;
+  background: var(--color-surface);
+  box-shadow: 0 16px 44px rgba(23, 32, 51, 0.12);
+}
+
+.option,
+.optionActive {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: $space-2;
+  align-items: center;
+  min-height: 2.5rem;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  padding: 0 $space-3;
+  color: var(--color-foreground);
+  text-align: left;
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.option:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.optionActive {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.flag {
+  font-size: 1rem;
+}
+
+@media (max-width: 640px) {
+  .popover {
+    left: 0;
+  }
+}

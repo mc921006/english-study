@@ -1,0 +1,25 @@
+@use "../../../styles/tokens" as *;
+
+.selector {
+  display: grid;
+  gap: $space-4;
+  max-width: 44rem;
+}
+
+.header {
+  display: grid;
+  gap: $space-2;
+}
+
+.header span {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  letter-spacing: 0;
+}

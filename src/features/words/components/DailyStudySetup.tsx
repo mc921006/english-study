@@ -5,7 +5,12 @@ import {
   SelectCardGrid,
   type SelectCardGridItem,
 } from "@/components/ui/select-card-grid/SelectCardGrid";
-import type { CefrLevel } from "@/types/word";
+import {
+  getDefaultWordStudyLevel,
+  type CefrLevel,
+  type WordLanguage,
+  type WordStudyLevel,
+} from "@/types/word";
 import type { DailyStudyCount } from "../storage/dailyStudyStorage";
 import styles from "./WordStudy.module.scss";
 
@@ -26,16 +31,22 @@ const dailyCountItems: Array<SelectCardGridItem<DailyStudyCount>> = [
 type DailyStudySetupProps = {
   errorMessage: string | null;
   isLoading: boolean;
-  onStart: (cefrLevel: CefrLevel, dailyCount: DailyStudyCount) => void;
+  wordLanguage: WordLanguage;
+  onStart: (cefrLevel: WordStudyLevel, dailyCount: DailyStudyCount) => void;
 };
 
 export function DailyStudySetup({
   errorMessage,
   isLoading,
+  wordLanguage,
   onStart,
 }: DailyStudySetupProps) {
   const [cefrLevel, setCefrLevel] = useState<CefrLevel>("A1");
   const [dailyCount, setDailyCount] = useState<DailyStudyCount>(10);
+  const showsCefrLevel = wordLanguage === "en";
+  const selectedStudyLevel = showsCefrLevel
+    ? cefrLevel
+    : getDefaultWordStudyLevel(wordLanguage);
 
   return (
     <section className={styles.setup} aria-label="Create daily study">
@@ -45,15 +56,18 @@ export function DailyStudySetup({
       </div>
 
       <div className={styles.setupSections}>
-        <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>CEFR 레벨</span>
-          <SelectCardGrid
-            ariaLabel="CEFR level"
-            items={cefrLevelItems}
-            selectedValue={cefrLevel}
-            onSelect={setCefrLevel}
-          />
-        </div>
+        {showsCefrLevel ? (
+          <div className={styles.controlGroup}>
+            <span className={styles.controlLabel}>CEFR 레벨</span>
+            <SelectCardGrid
+              ariaLabel="CEFR level"
+              items={cefrLevelItems}
+              selectedValue={cefrLevel}
+              variant="compact"
+              onSelect={setCefrLevel}
+            />
+          </div>
+        ) : null}
 
         <div className={styles.controlGroup}>
           <span className={styles.controlLabel}>학습 개수</span>
@@ -61,6 +75,7 @@ export function DailyStudySetup({
             ariaLabel="Daily word count"
             items={dailyCountItems}
             selectedValue={dailyCount}
+            variant="compact"
             onSelect={setDailyCount}
           />
         </div>
@@ -71,7 +86,7 @@ export function DailyStudySetup({
       <button
         className={styles.primaryButton}
         type="button"
-        onClick={() => onStart(cefrLevel, dailyCount)}
+        onClick={() => onStart(selectedStudyLevel, dailyCount)}
         disabled={isLoading}
       >
         {isLoading ? "준비 중..." : "학습 시작"}

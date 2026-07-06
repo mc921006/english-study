@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { getWords } from "@/services/words";
-import type { CefrLevel } from "@/types/word";
+import type { WordLanguage, WordStudyLevel } from "@/types/word";
 import {
   type DailyStudy,
   type DailyStudyCount,
@@ -12,23 +12,31 @@ import {
 
 type StudyStatus = "setup" | "loading" | "active" | "completed";
 
-export function useDailyStudy() {
+type UseDailyStudyParams = {
+  language: WordLanguage;
+};
+
+export function useDailyStudy({ language }: UseDailyStudyParams) {
   const [study, setStudy] = useState<DailyStudy | null>(null);
   const [status, setStatus] = useState<StudyStatus>("setup");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const visibleStudy = study?.language === language ? study : null;
+  const visibleStatus = study?.language === language ? status : "setup";
 
   const startStudy = useCallback(
-    async (cefrLevel: CefrLevel, dailyCount: DailyStudyCount) => {
+    async (cefrLevel: WordStudyLevel, dailyCount: DailyStudyCount) => {
       setStatus("loading");
       setErrorMessage(null);
 
       try {
         const words = await getWords({
           cefrLevel,
+          language,
           limit: dailyCount,
         });
         const nextStudy: DailyStudy = {
           date: getTodayKey(),
+          language,
           cefrLevel,
           dailyCount,
           words,
@@ -40,7 +48,7 @@ export function useDailyStudy() {
         setStatus(words.length > 0 ? "active" : "setup");
 
         if (words.length === 0) {
-          setErrorMessage("No words found for this CEFR level.");
+          setErrorMessage(getEmptyWordsMessage(language));
         }
       } catch (error) {
         setStatus("setup");
@@ -49,17 +57,17 @@ export function useDailyStudy() {
         );
       }
     },
-    [],
+    [language],
   );
 
   const startNewStudy = useCallback(async () => {
-    if (!study) {
+    if (!visibleStudy) {
       setStatus("setup");
       return;
     }
 
-    await startStudy(study.cefrLevel, study.dailyCount);
-  }, [startStudy, study]);
+    await startStudy(visibleStudy.cefrLevel, visibleStudy.dailyCount);
+  }, [startStudy, visibleStudy]);
 
   const returnToSetup = useCallback(() => {
     setStatus("setup");
@@ -91,32 +99,32 @@ export function useDailyStudy() {
   }, []);
 
   const moveToPrevious = useCallback(() => {
-    if (!study) {
+    if (!visibleStudy) {
       return;
     }
 
-    updateCurrentIndex(study.currentIndex - 1);
-  }, [study, updateCurrentIndex]);
+    updateCurrentIndex(visibleStudy.currentIndex - 1);
+  }, [visibleStudy, updateCurrentIndex]);
 
   const moveToNext = useCallback(() => {
-    if (!study) {
+    if (!visibleStudy) {
       return;
     }
 
-    updateCurrentIndex(study.currentIndex + 1);
-  }, [study, updateCurrentIndex]);
+    updateCurrentIndex(visibleStudy.currentIndex + 1);
+  }, [visibleStudy, updateCurrentIndex]);
 
-  const currentWord = study?.words[study.currentIndex] ?? null;
-  const totalWords = study?.words.length ?? 0;
-  const displayIndex = study
-    ? Math.min(study.currentIndex + 1, study.words.length)
+  const currentWord = visibleStudy?.words[visibleStudy.currentIndex] ?? null;
+  const totalWords = visibleStudy?.words.length ?? 0;
+  const displayIndex = visibleStudy
+    ? Math.min(visibleStudy.currentIndex + 1, visibleStudy.words.length)
     : 0;
   const progressPercent = totalWords > 0 ? (displayIndex / totalWords) * 100 : 0;
 
   return useMemo(
     () => ({
-      status,
-      study,
+      status: visibleStatus,
+      study: visibleStudy,
       currentWord,
       displayIndex,
       totalWords,
@@ -129,8 +137,8 @@ export function useDailyStudy() {
       moveToNext,
     }),
     [
-      status,
-      study,
+      visibleStatus,
+      visibleStudy,
       currentWord,
       displayIndex,
       totalWords,
@@ -143,4 +151,12 @@ export function useDailyStudy() {
       moveToNext,
     ],
   );
+}
+
+function getEmptyWordsMessage(language: WordLanguage) {
+  if (language === "vi") {
+    return "베트남어 단어 데이터가 아직 없습니다.";
+  }
+
+  return "No words found for this CEFR level.";
 }

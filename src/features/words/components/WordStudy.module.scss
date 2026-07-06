@@ -8,10 +8,10 @@
 .setup,
 .completed {
   display: grid;
-  gap: $space-5;
+  gap: $space-4;
   border: 1px solid var(--color-border);
   border-radius: $radius-lg;
-  padding: $space-6;
+  padding: $space-5;
   background: var(--color-surface);
 }
 
@@ -53,7 +53,7 @@
 
 .setupSections {
   display: grid;
-  gap: $space-5;
+  gap: $space-4;
 }
 
 .controlGroup {
@@ -399,7 +399,17 @@
   margin: 0;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
+  .setup,
+  .completed {
+    gap: $space-5;
+    padding: $space-6;
+  }
+
+  .setupSections {
+    gap: $space-5;
+  }
+
   .controls,
   .studyHeader {
     grid-template-columns: 1fr;

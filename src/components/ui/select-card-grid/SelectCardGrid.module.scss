@@ -1,16 +1,21 @@
 @use "../../../styles/tokens" as *;
 
-.grid {
+.grid,
+.gridCompact {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: $space-3;
+}
+
+.gridCompact {
+  gap: $space-2;
 }
 
 .card,
 .cardActive {
   display: grid;
   width: 100%;
-  min-height: 6.5rem;
+  min-height: 5.75rem;
   align-content: start;
   gap: $space-2;
   border: 1px solid var(--color-border);
@@ -20,6 +25,18 @@
   text-align: left;
   background: var(--color-surface);
   cursor: pointer;
+}
+
+.gridCompact .card,
+.gridCompact .cardActive {
+  min-height: 3.75rem;
+  align-content: center;
+  gap: $space-1;
+  padding: $space-2 $space-3;
+}
+
+.gridCompact .title {
+  font-size: 0.95rem;
 }
 
 .card:hover {
@@ -51,14 +68,17 @@
   line-height: 1.45;
 }
 
-@media (max-width: 640px) {
-  .grid {
+@media (max-width: 768px) {
+  .grid,
+  .gridCompact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: $space-2;
   }
 
   .card,
-  .cardActive {
+  .cardActive,
+  .gridCompact .card,
+  .gridCompact .cardActive {
     min-height: 4.75rem;
     align-content: center;
     gap: $space-1;
@@ -70,7 +90,8 @@
     font-size: 0.72rem;
   }
 
-  .title {
+  .title,
+  .gridCompact .title {
     font-size: 0.9rem;
     line-height: 1.2;
   }

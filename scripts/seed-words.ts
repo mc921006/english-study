@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+type WordLanguage = "en" | "vi";
 
 type SeedWord = {
   word: string;
@@ -18,6 +19,7 @@ type SeedWord = {
   pronunciation: string;
   part_of_speech: string;
   cefr_level: CefrLevel;
+  language: WordLanguage;
 };
 
 type ChatCompletionResponse = {
@@ -70,6 +72,7 @@ const DEFAULT_BATCH_SIZE = 50;
 const DEFAULT_MAX_RETRIES = 3;
 const EXCLUSION_PROMPT_LIMIT = 250;
 const PROGRESS_DIR = resolve(process.cwd(), ".seed-progress");
+const DEFAULT_WORD_LANGUAGE: WordLanguage = "en";
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
@@ -541,6 +544,7 @@ async function fetchExistingWordSet(
       .from("words")
       .select("word")
       .eq("cefr_level", cefrLevel)
+      .eq("language", DEFAULT_WORD_LANGUAGE)
       .range(from, to);
 
     if (error) {
@@ -652,6 +656,7 @@ function normalizeSeedWord(word: unknown, cefrLevel: CefrLevel): SeedWord {
     pronunciation: requiredString(item.pronunciation, "pronunciation"),
     part_of_speech: requiredString(item.part_of_speech, "part_of_speech"),
     cefr_level: cefrLevel,
+    language: DEFAULT_WORD_LANGUAGE,
   };
 
   return normalized;

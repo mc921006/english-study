@@ -1,21 +1,29 @@
 import { supabase } from "@/lib/supabase";
-import type { CefrLevel, Word } from "@/types/word";
+import {
+  defaultWordLanguage,
+  type Word,
+  type WordLanguage,
+  type WordStudyLevel,
+} from "@/types/word";
 
 export type GetWordsParams = {
-  cefrLevel: CefrLevel;
+  cefrLevel: WordStudyLevel;
+  language?: WordLanguage;
   limit: number | "all";
 };
 
 export async function getWords({
   cefrLevel,
+  language = defaultWordLanguage,
   limit,
 }: GetWordsParams): Promise<Word[]> {
   const { data, error } = await supabase
     .from("words")
     .select(
-      "word, meaning, example, example_meaning, pronunciation, part_of_speech, cefr_level",
+      "word, meaning, example, example_meaning, pronunciation, part_of_speech, cefr_level, language",
     )
     .eq("cefr_level", cefrLevel)
+    .eq("language", language)
     .limit(1000);
 
   if (error) {

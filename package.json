@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed:words": "node --no-warnings --experimental-strip-types scripts/seed-words.ts",
+    "seed:words:vi": "node --no-warnings --experimental-strip-types scripts/seed-vietnamese-words.ts",
     "seed:grammar": "node --no-warnings --experimental-strip-types scripts/seed-grammar.ts"
   },
   "dependencies": {

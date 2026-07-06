@@ -15,6 +15,7 @@ type SelectCardGridProps<TValue extends SelectCardValue> = Readonly<{
   ariaLabel: string;
   items: Array<SelectCardGridItem<TValue>>;
   selectedValue: TValue;
+  variant?: "default" | "compact";
   onSelect: (value: TValue) => void;
 }>;
 
@@ -22,10 +23,15 @@ export function SelectCardGrid<TValue extends SelectCardValue>({
   ariaLabel,
   items,
   selectedValue,
+  variant = "default",
   onSelect,
 }: SelectCardGridProps<TValue>) {
   return (
-    <div className={styles.grid} aria-label={ariaLabel} role="group">
+    <div
+      className={variant === "compact" ? styles.gridCompact : styles.grid}
+      aria-label={ariaLabel}
+      role="group"
+    >
       {items.map((item) => {
         const isSelected = item.value === selectedValue;
 

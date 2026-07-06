@@ -1,5 +1,6 @@
 "use client";
 
+import { useStudyLanguage } from "@/features/language/context/LanguageProvider";
 import { DailyStudyProgress } from "./DailyStudyProgress";
 import { DailyStudySetup } from "./DailyStudySetup";
 import { StudyCard } from "./StudyCard";
@@ -8,6 +9,7 @@ import { useDailyStudy } from "../hooks/useDailyStudy";
 import styles from "./WordStudy.module.scss";
 
 export function WordStudy() {
+  const { language } = useStudyLanguage();
   const {
     status,
     study,
@@ -21,13 +23,14 @@ export function WordStudy() {
     returnToSetup,
     moveToPrevious,
     moveToNext,
-  } = useDailyStudy();
+  } = useDailyStudy({ language: language.wordLanguage });
 
   if (status === "setup" || !study) {
     return (
       <DailyStudySetup
         errorMessage={errorMessage}
         isLoading={status === "loading"}
+        wordLanguage={language.wordLanguage}
         onStart={startStudy}
       />
     );
