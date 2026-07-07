@@ -36,6 +36,15 @@ type ChatCompletionErrorResponse = {
   };
 };
 
+type PronunciationRepairItem = Pick<
+  SeedWord,
+  "word" | "meaning" | "part_of_speech" | "cefr_level" | "pronunciation"
+>;
+
+type PronunciationRepairResult = Pick<SeedWord, "word" | "cefr_level"> & {
+  pronunciation: string;
+};
+
 type SeedProgress = {
   cefrLevel: CefrLevel;
   targetCount: number;
@@ -65,14 +74,30 @@ type SeedDatabase = {
 
 type WordsSupabaseClient = SupabaseClient<SeedDatabase>;
 
+type SeedCommand = {
+  mode: "seed";
+  cefrLevel: CefrLevel;
+  count: number;
+  batchSize: number;
+  maxRetries: number;
+};
+
+type RepairPronunciationCommand = {
+  mode: "repairPronunciations";
+  batchSize: number;
+  maxRetries: number;
+};
+
 const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 const OPENAI_DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_BATCH_SIZE = 50;
+const DEFAULT_REPAIR_BATCH_SIZE = 50;
 const DEFAULT_MAX_RETRIES = 3;
 const EXCLUSION_PROMPT_LIMIT = 250;
 const PROGRESS_DIR = resolve(process.cwd(), ".seed-progress");
 const DEFAULT_WORD_LANGUAGE: WordLanguage = "en";
+const HANGUL_PATTERN = /[\u3131-\u318e\uac00-\ud7a3]/;
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
@@ -82,9 +107,7 @@ main().catch((error) => {
 async function main() {
   loadEnvLocal();
 
-  const { cefrLevel, count, batchSize, maxRetries } = parseArgs(
-    process.argv.slice(2),
-  );
+  const command = parseArgs(process.argv.slice(2));
   const supabaseUrl = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL");
   const supabaseAnonKey = getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   const aiClient = getAIClient();
@@ -97,6 +120,21 @@ async function main() {
     },
   );
 
+  if (command.mode === "repairPronunciations") {
+    const result = await repairEnglishPronunciations({
+      supabase,
+      aiClient,
+      batchSize: command.batchSize,
+      maxRetries: command.maxRetries,
+    });
+
+    console.log(
+      `Done. Updated ${result.updatedCount} English pronunciations. Skipped ${result.skippedCount}.`,
+    );
+    return;
+  }
+
+  const { cefrLevel, count, batchSize, maxRetries } = command;
   const existingWordSet = await fetchExistingWordSet(supabase, cefrLevel);
   const progress = loadOrCreateProgress({ cefrLevel, count, batchSize });
 
@@ -128,12 +166,32 @@ async function main() {
   );
 }
 
-function parseArgs(args: string[]) {
+function parseArgs(args: string[]): SeedCommand | RepairPronunciationCommand {
   const [cefrLevelArg, countArg] = args;
+  const batchSize = parsePositiveIntEnv("SEED_WORDS_BATCH_SIZE", DEFAULT_BATCH_SIZE);
+  const maxRetries = parsePositiveIntEnv("SEED_WORDS_MAX_RETRIES", DEFAULT_MAX_RETRIES);
+
+  if (
+    cefrLevelArg === "repair-pronunciations" ||
+    cefrLevelArg === "--repair-pronunciations"
+  ) {
+    return {
+      mode: "repairPronunciations",
+      batchSize: parsePositiveIntEnv(
+        "SEED_WORDS_REPAIR_BATCH_SIZE",
+        DEFAULT_REPAIR_BATCH_SIZE,
+      ),
+      maxRetries,
+    };
+  }
 
   if (!isCefrLevel(cefrLevelArg)) {
     throw new Error(
-      `Usage: pnpm seed:words <${CEFR_LEVELS.join("|")}> <count>\nExample: pnpm seed:words A1 100`,
+      [
+        `Usage: pnpm seed:words <${CEFR_LEVELS.join("|")}> <count>`,
+        "Example: pnpm seed:words A1 100",
+        "Repair pronunciations: pnpm seed:words repair-pronunciations",
+      ].join("\n"),
     );
   }
 
@@ -142,10 +200,7 @@ function parseArgs(args: string[]) {
     throw new Error("count must be a positive integer.");
   }
 
-  const batchSize = parsePositiveIntEnv("SEED_WORDS_BATCH_SIZE", DEFAULT_BATCH_SIZE);
-  const maxRetries = parsePositiveIntEnv("SEED_WORDS_MAX_RETRIES", DEFAULT_MAX_RETRIES);
-
-  return { cefrLevel: cefrLevelArg, count, batchSize, maxRetries };
+  return { mode: "seed", cefrLevel: cefrLevelArg, count, batchSize, maxRetries };
 }
 
 function isCefrLevel(value: string | undefined): value is CefrLevel {
@@ -278,7 +333,10 @@ async function generateWords({
           `example must be a natural English sentence at CEFR ${cefrLevel} difficulty.`,
           "example_meaning must be a natural Korean translation of the example.",
           "part_of_speech must be included.",
-          "pronunciation must be IPA.",
+          "pronunciation must be IPA or a standard English dictionary pronunciation using Latin/IPA symbols.",
+          "pronunciation must never contain Korean Hangul, Korean-style transliteration, or Korean letters.",
+          "Good pronunciation examples: /ˈæp.əl/, /ˈtiː.tʃər/, /rʌn/.",
+          "Bad pronunciation examples: 애플, 티처, 런.",
           `Every item must use cefr_level "${cefrLevel}".`,
           "Return JSON only.",
         ].join(" "),
@@ -489,10 +547,340 @@ async function seedWordsInBatches({
   };
 }
 
+async function repairEnglishPronunciations({
+  supabase,
+  aiClient,
+  batchSize,
+  maxRetries,
+}: {
+  supabase: WordsSupabaseClient;
+  aiClient: ReturnType<typeof getAIClient>;
+  batchSize: number;
+  maxRetries: number;
+}) {
+  const wordsToRepair = await fetchEnglishWordsWithHangulPronunciation(supabase);
+
+  console.log(
+    [
+      `Repairing English pronunciations with ${aiClient.model}`,
+      `batch=${batchSize}`,
+      `retries=${maxRetries}`,
+      `affected=${wordsToRepair.length}`,
+    ].join(" | "),
+  );
+
+  let updatedCount = 0;
+  let skippedCount = 0;
+
+  for (let index = 0; index < wordsToRepair.length; index += batchSize) {
+    const batch = wordsToRepair.slice(index, index + batchSize);
+    const batchNumber = Math.floor(index / batchSize) + 1;
+    const totalBatches = Math.ceil(wordsToRepair.length / batchSize);
+
+    console.log(
+      `[${new Date().toISOString()}] Repair batch ${batchNumber}/${totalBatches} | target=${batch.length}`,
+    );
+
+    const repairs = await withRetries(
+      () => generatePronunciationRepairs({ aiClient, words: batch }),
+      maxRetries,
+      `generate pronunciation repair batch ${batchNumber}`,
+    );
+    const repairedRows = await withRetries(
+      () => updatePronunciations(supabase, repairs),
+      maxRetries,
+      `update pronunciation repair batch ${batchNumber}`,
+    );
+
+    updatedCount += repairedRows;
+    skippedCount += batch.length - repairedRows;
+
+    console.log(
+      `Repair batch ${batchNumber}: updated=${repairedRows}, skipped=${batch.length - repairedRows}, progress=${updatedCount}/${wordsToRepair.length}`,
+    );
+  }
+
+  return {
+    updatedCount,
+    skippedCount,
+  };
+}
+
+async function fetchEnglishWordsWithHangulPronunciation(
+  supabase: WordsSupabaseClient,
+) {
+  const words: PronunciationRepairItem[] = [];
+  const pageSize = 1000;
+  let from = 0;
+
+  while (true) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabase
+      .from("words")
+      .select("word, meaning, part_of_speech, cefr_level, pronunciation")
+      .eq("language", DEFAULT_WORD_LANGUAGE)
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to fetch words for pronunciation repair: ${error.message}`);
+    }
+
+    for (const row of data ?? []) {
+      if (!hasHangul(String(row.pronunciation))) {
+        continue;
+      }
+
+      words.push({
+        word: String(row.word),
+        meaning: String(row.meaning),
+        part_of_speech: String(row.part_of_speech),
+        cefr_level: row.cefr_level,
+        pronunciation: String(row.pronunciation),
+      });
+    }
+
+    if (!data || data.length < pageSize) {
+      break;
+    }
+
+    from += pageSize;
+  }
+
+  return words.sort((firstWord, secondWord) => {
+    const levelComparison =
+      CEFR_LEVELS.indexOf(firstWord.cefr_level) -
+      CEFR_LEVELS.indexOf(secondWord.cefr_level);
+
+    if (levelComparison !== 0) {
+      return levelComparison;
+    }
+
+    return firstWord.word.localeCompare(secondWord.word, "en-US");
+  });
+}
+
+async function generatePronunciationRepairs({
+  aiClient,
+  words,
+}: {
+  aiClient: ReturnType<typeof getAIClient>;
+  words: PronunciationRepairItem[];
+}) {
+  const requestBody = {
+    model: aiClient.model,
+    max_tokens: getPronunciationRepairMaxTokens(words.length),
+    messages: [
+      {
+        role: "system",
+        content:
+          "You repair English vocabulary pronunciation data for Korean learners. Return JSON only. Do not include markdown, comments, prose, or explanations.",
+      },
+      {
+        role: "user",
+        content: [
+          "For each item, regenerate only pronunciation.",
+          "Return the same word and cefr_level exactly as provided.",
+          "Do not change meaning, part_of_speech, cefr_level, or word.",
+          "pronunciation must be IPA whenever possible.",
+          "pronunciation may use standard English dictionary notation only if IPA is not possible.",
+          "pronunciation must never contain Korean Hangul, Korean-style transliteration, or Korean letters.",
+          "Good pronunciation examples: /ˈæp.əl/, /ˈtiː.tʃər/, /rʌn/.",
+          "Bad pronunciation examples: 애플, 티처, 런.",
+          `Items: ${JSON.stringify(
+            words.map((word) => ({
+              word: word.word,
+              cefr_level: word.cefr_level,
+              meaning: word.meaning,
+              part_of_speech: word.part_of_speech,
+              current_pronunciation: word.pronunciation,
+            })),
+          )}`,
+          "Return JSON only.",
+        ].join(" "),
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "word_pronunciation_repair_data",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            pronunciations: {
+              type: "array",
+              minItems: words.length,
+              maxItems: words.length,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  word: { type: "string" },
+                  cefr_level: { type: "string", enum: CEFR_LEVELS },
+                  pronunciation: { type: "string" },
+                },
+                required: ["word", "cefr_level", "pronunciation"],
+              },
+            },
+          },
+          required: ["pronunciations"],
+        },
+      },
+    },
+    ...(aiClient.usesOpenRouter
+      ? {
+          provider: {
+            require_parameters: true,
+          },
+        }
+      : {}),
+  };
+
+  const response = await fetch(aiClient.endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${aiClient.apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://localhost",
+      "X-Title": "english-study seed words",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const responseBody = (await response.json()) as
+    | ChatCompletionResponse
+    | ChatCompletionErrorResponse;
+  if (!response.ok) {
+    const message =
+      "error" in responseBody && responseBody.error?.message
+        ? responseBody.error.message
+        : response.statusText;
+    throw new Error(`${aiClient.providerName} request failed: ${message}`);
+  }
+
+  const parsed = parseAIJsonObject(responseBody as ChatCompletionResponse) as {
+    pronunciations?: unknown[];
+  };
+
+  if (!Array.isArray(parsed.pronunciations)) {
+    throw new Error(
+      `${aiClient.providerName} response did not include a pronunciations array.`,
+    );
+  }
+
+  if (parsed.pronunciations.length !== words.length) {
+    throw new Error(
+      `${aiClient.providerName} returned ${parsed.pronunciations.length} pronunciations, but ${words.length} were requested.`,
+    );
+  }
+
+  return normalizePronunciationRepairs(parsed.pronunciations, words);
+}
+
+function normalizePronunciationRepairs(
+  repairs: unknown[],
+  requestedWords: PronunciationRepairItem[],
+) {
+  const expectedKeys = new Set(requestedWords.map(getPronunciationRepairKey));
+  const repairByKey = new Map<string, PronunciationRepairResult>();
+
+  for (const repair of repairs) {
+    if (!repair || typeof repair !== "object") {
+      throw new Error("AI returned an invalid pronunciation repair item.");
+    }
+
+    const item = repair as Record<string, unknown>;
+    const cefrLevel = requiredString(item.cefr_level, "cefr_level");
+    if (!isCefrLevel(cefrLevel)) {
+      throw new Error("AI returned an invalid cefr_level.");
+    }
+
+    const normalizedRepair = {
+      word: requiredString(item.word, "word"),
+      cefr_level: cefrLevel,
+      pronunciation: requiredString(item.pronunciation, "pronunciation"),
+    };
+    assertEnglishPronunciation(normalizedRepair.pronunciation);
+
+    const repairKey = getPronunciationRepairKey(normalizedRepair);
+    if (!expectedKeys.has(repairKey)) {
+      throw new Error(`AI returned an unexpected pronunciation item: ${repairKey}.`);
+    }
+
+    if (repairByKey.has(repairKey)) {
+      throw new Error(`AI returned a duplicate pronunciation item: ${repairKey}.`);
+    }
+
+    repairByKey.set(repairKey, normalizedRepair);
+  }
+
+  for (const requestedWord of requestedWords) {
+    const repairKey = getPronunciationRepairKey(requestedWord);
+    if (!repairByKey.has(repairKey)) {
+      throw new Error(`AI did not return pronunciation for: ${repairKey}.`);
+    }
+  }
+
+  return requestedWords.map((word) => {
+    const repair = repairByKey.get(getPronunciationRepairKey(word));
+    if (!repair) {
+      throw new Error(`Missing pronunciation repair for ${word.word}.`);
+    }
+
+    return repair;
+  });
+}
+
+async function updatePronunciations(
+  supabase: WordsSupabaseClient,
+  repairs: PronunciationRepairResult[],
+) {
+  let updatedCount = 0;
+
+  for (const repair of repairs) {
+    assertEnglishPronunciation(repair.pronunciation);
+
+    const { data, error } = await supabase
+      .from("words")
+      .update({ pronunciation: repair.pronunciation })
+      .eq("language", DEFAULT_WORD_LANGUAGE)
+      .eq("cefr_level", repair.cefr_level)
+      .eq("word", repair.word)
+      .select("word");
+
+    if (error) {
+      throw new Error(
+        `Failed to update pronunciation for ${repair.cefr_level}:${repair.word}: ${error.message}`,
+      );
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error(
+        `No word row was updated for ${repair.cefr_level}:${repair.word}.`,
+      );
+    }
+
+    updatedCount += data.length;
+  }
+
+  return updatedCount;
+}
+
+function getPronunciationRepairKey(
+  word: Pick<SeedWord, "word" | "cefr_level">,
+) {
+  return `${word.cefr_level}:${normalizeWord(word.word)}`;
+}
+
 async function insertWords(
   supabase: WordsSupabaseClient,
   words: SeedWord[],
 ) {
+  for (const word of words) {
+    assertEnglishPronunciation(word.pronunciation);
+  }
+
   const { data, error } = await supabase.from("words").insert(words).select("word");
 
   if (error) {
@@ -632,14 +1020,22 @@ function getMaxTokens(count: number) {
   return Math.min(12_000, Math.max(1_000, count * 180 + 500));
 }
 
+function getPronunciationRepairMaxTokens(count: number) {
+  return Math.min(4_000, Math.max(500, count * 50 + 300));
+}
+
 function parseAIJson(body: ChatCompletionResponse) {
+  return parseAIJsonObject(body) as { words?: unknown[] };
+}
+
+function parseAIJsonObject(body: ChatCompletionResponse) {
   const outputText = body.choices?.[0]?.message?.content;
 
   if (!outputText) {
     throw new Error("AI response did not include output text.");
   }
 
-  return JSON.parse(outputText) as { words?: unknown[] };
+  return JSON.parse(outputText) as Record<string, unknown>;
 }
 
 function normalizeSeedWord(word: unknown, cefrLevel: CefrLevel): SeedWord {
@@ -658,6 +1054,7 @@ function normalizeSeedWord(word: unknown, cefrLevel: CefrLevel): SeedWord {
     cefr_level: cefrLevel,
     language: DEFAULT_WORD_LANGUAGE,
   };
+  assertEnglishPronunciation(normalized.pronunciation);
 
   return normalized;
 }
@@ -690,4 +1087,16 @@ function dedupeWords(words: SeedWord[], cefrLevel: CefrLevel) {
 
 function normalizeWord(word: string) {
   return word.trim().toLocaleLowerCase("en-US");
+}
+
+function assertEnglishPronunciation(pronunciation: string) {
+  if (hasHangul(pronunciation)) {
+    throw new Error(
+      `English pronunciation must not contain Korean Hangul: ${pronunciation}`,
+    );
+  }
+}
+
+function hasHangul(value: string) {
+  return HANGUL_PATTERN.test(value);
 }

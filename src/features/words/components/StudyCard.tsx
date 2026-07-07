@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, MouseEvent } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, TouchEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Word } from "@/types/word";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
@@ -24,6 +24,16 @@ type CardTransition = {
   outgoingWord: Word;
   phase: SlidePhase;
 };
+
+function stopPronunciationEventPropagation(
+  event:
+    | KeyboardEvent<HTMLButtonElement>
+    | MouseEvent<HTMLButtonElement>
+    | PointerEvent<HTMLButtonElement>
+    | TouchEvent<HTMLButtonElement>,
+) {
+  event.stopPropagation();
+}
 
 export function StudyCard({
   currentIndex,
@@ -273,7 +283,10 @@ function renderCard({
             type="button"
             aria-label={`${word.word} pronunciation`}
             onClick={onPronunciationClick}
-            onKeyDown={(event) => event.stopPropagation()}
+            onKeyDown={stopPronunciationEventPropagation}
+            onMouseDown={stopPronunciationEventPropagation}
+            onPointerDown={stopPronunciationEventPropagation}
+            onTouchStart={stopPronunciationEventPropagation}
           >
             🔊
           </button>
