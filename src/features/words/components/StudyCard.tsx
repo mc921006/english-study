@@ -1,8 +1,9 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Word } from "@/types/word";
+import { useTextToSpeech } from "../hooks/useTextToSpeech";
 import styles from "./WordStudy.module.scss";
 
 type StudyCardProps = {
@@ -23,6 +24,7 @@ export function StudyCard({
   const resetFrameRef = useRef<number | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isCardResetting, setIsCardResetting] = useState(false);
+  const { speakText, stopSpeech } = useTextToSpeech();
   const isLastWord = currentIndex === totalWords - 1;
   const partOfSpeech = getPartOfSpeechDisplay(word.part_of_speech);
 
@@ -50,6 +52,10 @@ export function StudyCard({
     };
   }, []);
 
+  useEffect(() => {
+    return stopSpeech;
+  }, [stopSpeech, word.language, word.word]);
+
   const moveToPrevious = () => {
     resetCardToFront();
     requestAnimationFrame(onPrevious);
@@ -75,6 +81,11 @@ export function StudyCard({
 
     event.preventDefault();
     flipCard();
+  };
+
+  const handlePronunciationClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    speakText(word.word, word.language);
   };
 
   const cardClassName = [
@@ -106,7 +117,7 @@ export function StudyCard({
               className={styles.audioButton}
               type="button"
               aria-label={`${word.word} pronunciation`}
-              onClick={(event) => event.stopPropagation()}
+              onClick={handlePronunciationClick}
               onKeyDown={(event) => event.stopPropagation()}
             >
               🔊
