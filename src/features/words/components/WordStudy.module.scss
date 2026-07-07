@@ -218,6 +218,8 @@
 }
 
 .cardMotion {
+  --card-slide-distance: 108%;
+
   position: absolute;
   inset: 0;
   display: block;
@@ -244,22 +246,22 @@
 
 .cardEnterFromRight {
   opacity: 0;
-  transform: translateX(1.35rem);
+  transform: translateX(var(--card-slide-distance));
 }
 
 .cardEnterFromLeft {
   opacity: 0;
-  transform: translateX(-1.35rem);
+  transform: translateX(calc(var(--card-slide-distance) * -1));
 }
 
 .cardExitToLeft {
   opacity: 0;
-  transform: translateX(-1.35rem);
+  transform: translateX(calc(var(--card-slide-distance) * -1));
 }
 
 .cardExitToRight {
   opacity: 0;
-  transform: translateX(1.35rem);
+  transform: translateX(var(--card-slide-distance));
 }
 
 .card,
