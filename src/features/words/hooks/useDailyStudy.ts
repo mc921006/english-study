@@ -10,7 +10,13 @@ import {
   saveDailyStudy,
 } from "../storage/dailyStudyStorage";
 
-type StudyStatus = "setup" | "loading" | "active" | "completed";
+type StudyStatus =
+  | "setup"
+  | "loading"
+  | "active"
+  | "completed"
+  | "quiz"
+  | "quizResults";
 
 type UseDailyStudyParams = {
   language: WordLanguage;
@@ -74,6 +80,24 @@ export function useDailyStudy({ language }: UseDailyStudyParams) {
     setErrorMessage(null);
   }, []);
 
+  const startQuiz = useCallback(() => {
+    if (!visibleStudy || visibleStudy.words.length === 0) {
+      setStatus("setup");
+      return;
+    }
+
+    setStatus("quiz");
+  }, [visibleStudy]);
+
+  const showQuizResults = useCallback(() => {
+    if (!visibleStudy) {
+      setStatus("setup");
+      return;
+    }
+
+    setStatus("quizResults");
+  }, [visibleStudy]);
+
   const updateCurrentIndex = useCallback((nextIndex: number) => {
     setStudy((currentStudy) => {
       if (!currentStudy) {
@@ -133,6 +157,8 @@ export function useDailyStudy({ language }: UseDailyStudyParams) {
       startStudy,
       startNewStudy,
       returnToSetup,
+      startQuiz,
+      showQuizResults,
       moveToPrevious,
       moveToNext,
     }),
@@ -147,6 +173,8 @@ export function useDailyStudy({ language }: UseDailyStudyParams) {
       startStudy,
       startNewStudy,
       returnToSetup,
+      startQuiz,
+      showQuizResults,
       moveToPrevious,
       moveToNext,
     ],

@@ -39,6 +39,40 @@ export async function getWords({
   return shuffledWords.slice(0, limit);
 }
 
+export async function getWordMeaningsByLanguage(
+  language: WordLanguage,
+): Promise<string[]> {
+  const pageSize = 1000;
+  const meanings: string[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabase
+      .from("words")
+      .select("word, meaning")
+      .eq("language", language)
+      .order("word", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const rows = (data ?? []) as Array<Pick<Word, "meaning">>;
+    meanings.push(
+      ...rows
+        .map((row) => row.meaning.trim())
+        .filter((meaning) => meaning.length > 0),
+    );
+
+    if (rows.length < pageSize) {
+      break;
+    }
+  }
+
+  return meanings;
+}
+
 function shuffleWords(words: Word[]): Word[] {
   return [...words].sort(() => Math.random() - 0.5);
 }

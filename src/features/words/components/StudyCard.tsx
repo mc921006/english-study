@@ -6,12 +6,23 @@ import type { Word } from "@/types/word";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
 import styles from "./WordStudy.module.scss";
 
+const cardSlideDurationMs = 300;
+
 type StudyCardProps = {
   currentIndex: number;
   totalWords: number;
   word: Word;
   onPrevious: () => void;
   onNext: () => void;
+};
+
+type SlideDirection = "next" | "previous";
+type SlidePhase = "ready" | "running";
+
+type CardTransition = {
+  direction: SlideDirection;
+  outgoingWord: Word;
+  phase: SlidePhase;
 };
 
 export function StudyCard({
@@ -22,11 +33,27 @@ export function StudyCard({
   onNext,
 }: StudyCardProps) {
   const resetFrameRef = useRef<number | null>(null);
+  const slideFrameRef = useRef<number | null>(null);
+  const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isCardResetting, setIsCardResetting] = useState(false);
+  const [cardTransition, setCardTransition] =
+    useState<CardTransition | null>(null);
   const { speakText, stopSpeech } = useTextToSpeech();
   const isLastWord = currentIndex === totalWords - 1;
-  const partOfSpeech = getPartOfSpeechDisplay(word.part_of_speech);
+  const isTransitioning = cardTransition !== null;
+
+  const clearSlideTimers = useCallback(() => {
+    if (slideFrameRef.current !== null) {
+      cancelAnimationFrame(slideFrameRef.current);
+      slideFrameRef.current = null;
+    }
+
+    if (slideTimeoutRef.current !== null) {
+      clearTimeout(slideTimeoutRef.current);
+      slideTimeoutRef.current = null;
+    }
+  }, []);
 
   const resetCardToFront = useCallback(() => {
     if (resetFrameRef.current !== null) {
@@ -49,24 +76,76 @@ export function StudyCard({
       if (resetFrameRef.current !== null) {
         cancelAnimationFrame(resetFrameRef.current);
       }
+
+      clearSlideTimers();
     };
-  }, []);
+  }, [clearSlideTimers]);
 
   useEffect(() => {
     return stopSpeech;
   }, [stopSpeech, word.language, word.word]);
 
-  const moveToPrevious = () => {
+  const startSlideTransition = (
+    direction: SlideDirection,
+    navigate: () => void,
+  ) => {
+    if (cardTransition) {
+      return;
+    }
+
+    clearSlideTimers();
     resetCardToFront();
-    requestAnimationFrame(onPrevious);
+    stopSpeech();
+    setCardTransition({
+      direction,
+      outgoingWord: word,
+      phase: "ready",
+    });
+    navigate();
+
+    slideFrameRef.current = requestAnimationFrame(() => {
+      slideFrameRef.current = null;
+      setCardTransition((currentTransition) => {
+        if (!currentTransition) {
+          return currentTransition;
+        }
+
+        return {
+          ...currentTransition,
+          phase: "running",
+        };
+      });
+    });
+
+    slideTimeoutRef.current = setTimeout(() => {
+      slideTimeoutRef.current = null;
+      setCardTransition(null);
+    }, cardSlideDurationMs + 40);
+  };
+
+  const moveToPrevious = () => {
+    if (currentIndex === 0) {
+      return;
+    }
+
+    startSlideTransition("previous", onPrevious);
   };
 
   const moveToNext = () => {
-    resetCardToFront();
-    requestAnimationFrame(onNext);
+    if (isLastWord) {
+      resetCardToFront();
+      requestAnimationFrame(onNext);
+      return;
+    }
+
+    startSlideTransition("next", onNext);
   };
 
   const flipCard = () => {
+    if (isTransitioning) {
+      return;
+    }
+
     setIsFlipped((value) => !value);
   };
 
@@ -85,15 +164,22 @@ export function StudyCard({
 
   const handlePronunciationClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+
+    if (isTransitioning) {
+      return;
+    }
+
     speakText(word.word, word.language);
   };
 
-  const cardClassName = [
-    isFlipped ? styles.cardFlipped : styles.card,
-    isCardResetting ? styles.cardResetting : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const currentMotionClassName = getCardMotionClassName(
+    cardTransition,
+    "current",
+  );
+  const outgoingMotionClassName = getCardMotionClassName(
+    cardTransition,
+    "outgoing",
+  );
 
   return (
     <section className={styles.viewer} aria-label="Word card viewer">
@@ -103,42 +189,29 @@ export function StudyCard({
         onKeyDown={handleCardKeyDown}
         aria-label="Flip word card"
         aria-pressed={isFlipped}
+        aria-disabled={isTransitioning}
         role="button"
         tabIndex={0}
       >
-        <span className={cardClassName}>
-          <span className={styles.cardFaceFront}>
-            <span
-              className={`${styles.partOfSpeechBadge} ${partOfSpeech.className}`}
-            >
-              {partOfSpeech.label}
-            </span>
-            <button
-              className={styles.audioButton}
-              type="button"
-              aria-label={`${word.word} pronunciation`}
-              onClick={handlePronunciationClick}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              🔊
-            </button>
-            <span className={styles.frontContent}>
-              <span className={styles.word}>{word.word}</span>
-              <span className={styles.pronunciation}>
-                {`[ ${word.pronunciation} ]`}
-              </span>
-            </span>
-          </span>
-          <span className={styles.cardFaceBack}>
-            <span className={styles.meaning}>{word.meaning}</span>
-            <span className={styles.example}>
-              {highlightWordInExample(word.example, word.word)}
-            </span>
-            <span className={styles.exampleMeaning}>
-              {word.example_meaning}
-            </span>
-          </span>
+        <span className={currentMotionClassName}>
+          {renderCard({
+            isFlipped,
+            isInteractive: true,
+            isResetting: isCardResetting,
+            onPronunciationClick: handlePronunciationClick,
+            word,
+          })}
         </span>
+        {cardTransition ? (
+          <span className={outgoingMotionClassName} aria-hidden="true">
+            {renderCard({
+              isFlipped: false,
+              isInteractive: false,
+              isResetting: false,
+              word: cardTransition.outgoingWord,
+            })}
+          </span>
+        ) : null}
       </div>
 
       <div className={styles.navigation}>
@@ -146,16 +219,112 @@ export function StudyCard({
           className={styles.navButton}
           type="button"
           onClick={moveToPrevious}
-          disabled={currentIndex === 0}
+          disabled={currentIndex === 0 || isTransitioning}
         >
           Previous
         </button>
-        <button className={styles.navButton} type="button" onClick={moveToNext}>
+        <button
+          className={styles.navButton}
+          type="button"
+          onClick={moveToNext}
+          disabled={isTransitioning}
+        >
           {isLastWord ? "Complete" : "Next"}
         </button>
       </div>
     </section>
   );
+}
+
+type RenderCardParams = {
+  isFlipped: boolean;
+  isInteractive: boolean;
+  isResetting: boolean;
+  onPronunciationClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  word: Word;
+};
+
+function renderCard({
+  isFlipped,
+  isInteractive,
+  isResetting,
+  onPronunciationClick,
+  word,
+}: RenderCardParams) {
+  const partOfSpeech = getPartOfSpeechDisplay(word.part_of_speech);
+  const cardClassName = [
+    isFlipped ? styles.cardFlipped : styles.card,
+    isResetting ? styles.cardResetting : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <span className={cardClassName}>
+      <span className={styles.cardFaceFront}>
+        <span
+          className={`${styles.partOfSpeechBadge} ${partOfSpeech.className}`}
+        >
+          {partOfSpeech.label}
+        </span>
+        {isInteractive ? (
+          <button
+            className={styles.audioButton}
+            type="button"
+            aria-label={`${word.word} pronunciation`}
+            onClick={onPronunciationClick}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            🔊
+          </button>
+        ) : (
+          <span className={styles.audioButton}>🔊</span>
+        )}
+        <span className={styles.frontContent}>
+          <span className={styles.word}>{word.word}</span>
+          <span className={styles.pronunciation}>
+            {`[ ${word.pronunciation} ]`}
+          </span>
+        </span>
+      </span>
+      <span className={styles.cardFaceBack}>
+        <span className={styles.meaning}>{word.meaning}</span>
+        <span className={styles.example}>
+          {highlightWordInExample(word.example, word.word)}
+        </span>
+        <span className={styles.exampleMeaning}>{word.example_meaning}</span>
+      </span>
+    </span>
+  );
+}
+
+function getCardMotionClassName(
+  transition: CardTransition | null,
+  layer: "current" | "outgoing",
+) {
+  const classNames = [
+    styles.cardMotion,
+    layer === "current" ? styles.cardMotionCurrent : styles.cardMotionOutgoing,
+  ];
+
+  if (transition?.phase === "ready" && layer === "current") {
+    classNames.push(styles.cardMotionReady);
+    classNames.push(
+      transition.direction === "next"
+        ? styles.cardEnterFromRight
+        : styles.cardEnterFromLeft,
+    );
+  }
+
+  if (transition?.phase === "running" && layer === "outgoing") {
+    classNames.push(
+      transition.direction === "next"
+        ? styles.cardExitToLeft
+        : styles.cardExitToRight,
+    );
+  }
+
+  return classNames.filter(Boolean).join(" ");
 }
 
 function getPartOfSpeechDisplay(partOfSpeech: string) {
