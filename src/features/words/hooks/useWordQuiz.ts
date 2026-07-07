@@ -37,6 +37,9 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
   const [answers, setAnswers] = useState<Array<WordQuizAnswer | undefined>>(
     [],
   );
+  const [selectedOptionIds, setSelectedOptionIds] = useState<
+    Array<string | undefined>
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -50,12 +53,14 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
       setQuestions(createQuizQuestions(words, candidateMeanings));
       setCurrentIndex(0);
       setAnswers([]);
+      setSelectedOptionIds([]);
 
       return true;
     } catch (error) {
       setQuestions([]);
       setCurrentIndex(0);
       setAnswers([]);
+      setSelectedOptionIds([]);
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to create quiz.",
       );
@@ -66,7 +71,7 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
     }
   }, [language, words]);
 
-  const selectAnswer = useCallback(
+  const selectOption = useCallback(
     (option: WordQuizOption) => {
       const question = questions[currentIndex];
 
@@ -74,24 +79,52 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
         return;
       }
 
-      setAnswers((currentAnswers) => {
-        if (currentAnswers[currentIndex]) {
-          return currentAnswers;
-        }
+      if (answers[currentIndex]) {
+        return;
+      }
 
-        const nextAnswers = [...currentAnswers];
-        nextAnswers[currentIndex] = {
-          selectedOptionId: option.id,
-          selectedMeaning: option.meaning,
-          correctMeaning: question.correctMeaning,
-          isCorrect: option.id === question.correctOptionId,
-        };
+      setSelectedOptionIds((currentSelectedOptionIds) => {
+        const nextSelectedOptionIds = [...currentSelectedOptionIds];
+        nextSelectedOptionIds[currentIndex] = option.id;
 
-        return nextAnswers;
+        return nextSelectedOptionIds;
       });
     },
-    [currentIndex, questions],
+    [answers, currentIndex, questions],
   );
+
+  const checkAnswer = useCallback(() => {
+    const question = questions[currentIndex];
+    const selectedOptionId = selectedOptionIds[currentIndex];
+
+    if (!question || !selectedOptionId) {
+      return;
+    }
+
+    const selectedOption = question.options.find(
+      (option) => option.id === selectedOptionId,
+    );
+
+    if (!selectedOption) {
+      return;
+    }
+
+    setAnswers((currentAnswers) => {
+      if (currentAnswers[currentIndex]) {
+        return currentAnswers;
+      }
+
+      const nextAnswers = [...currentAnswers];
+      nextAnswers[currentIndex] = {
+        selectedOptionId: selectedOption.id,
+        selectedMeaning: selectedOption.meaning,
+        correctMeaning: question.correctMeaning,
+        isCorrect: selectedOption.id === question.correctOptionId,
+      };
+
+      return nextAnswers;
+    });
+  }, [currentIndex, questions, selectedOptionIds]);
 
   const moveToNextQuestion = useCallback(() => {
     setCurrentIndex((index) => Math.min(index + 1, questions.length - 1));
@@ -122,24 +155,28 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
       questions,
       currentQuestion: questions[currentIndex] ?? null,
       currentIndex,
+      currentSelectedOptionId: selectedOptionIds[currentIndex] ?? null,
       currentAnswer: answers[currentIndex] ?? null,
       result,
       isLoading,
       errorMessage,
       startQuiz,
       retryQuiz: startQuiz,
-      selectAnswer,
+      selectOption,
+      checkAnswer,
       moveToNextQuestion,
     }),
     [
       questions,
       currentIndex,
+      selectedOptionIds,
       answers,
       result,
       isLoading,
       errorMessage,
       startQuiz,
-      selectAnswer,
+      selectOption,
+      checkAnswer,
       moveToNextQuestion,
     ],
   );

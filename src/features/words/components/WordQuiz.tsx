@@ -12,21 +12,25 @@ import styles from "./WordStudy.module.scss";
 type WordQuizProps = {
   answer: WordQuizAnswer | null;
   currentIndex: number;
+  selectedOptionId: string | null;
   question: WordQuizQuestion;
   totalQuestions: number;
+  onCheckAnswer: () => void;
   onComplete: () => void;
   onNextQuestion: () => void;
-  onSelectAnswer: (option: WordQuizOption) => void;
+  onSelectOption: (option: WordQuizOption) => void;
 };
 
 export function WordQuiz({
   answer,
   currentIndex,
+  selectedOptionId,
   question,
   totalQuestions,
+  onCheckAnswer,
   onComplete,
   onNextQuestion,
-  onSelectAnswer,
+  onSelectOption,
 }: WordQuizProps) {
   const { speakText, stopSpeech } = useTextToSpeech();
   const questionNumber = currentIndex + 1;
@@ -40,6 +44,7 @@ export function WordQuiz({
 
   const handleNextClick = () => {
     if (!answer) {
+      onCheckAnswer();
       return;
     }
 
@@ -50,6 +55,7 @@ export function WordQuiz({
 
     onNextQuestion();
   };
+  const isAnswerChecked = Boolean(answer);
 
   return (
     <section className={styles.quiz} aria-label="Word quiz">
@@ -91,48 +97,85 @@ export function WordQuiz({
       <div className={styles.quizBody}>
         <div className={styles.answerGrid}>
           {question.options.map((option) => {
-            const isSelected = answer?.selectedOptionId === option.id;
+            const isSelected = selectedOptionId === option.id;
             const isCorrectOption = option.id === question.correctOptionId;
+            const isSelectedIncorrect =
+              answer?.selectedOptionId === option.id && !isCorrectOption;
             const optionClassName = [
               styles.answerOption,
-              answer && isCorrectOption ? styles.answerOptionCorrect : "",
-              answer && isSelected && !isCorrectOption
+              isSelected && !isAnswerChecked ? styles.answerOptionSelected : "",
+              isAnswerChecked && isCorrectOption
+                ? styles.answerOptionCorrect
+                : "",
+              isAnswerChecked && isSelectedIncorrect
                 ? styles.answerOptionIncorrect
                 : "",
             ]
               .filter(Boolean)
               .join(" ");
+            const statusLabel = getOptionStatusLabel({
+              answer,
+              isCorrectOption,
+              optionId: option.id,
+            });
 
             return (
               <button
                 className={optionClassName}
                 key={option.id}
                 type="button"
-                onClick={() => onSelectAnswer(option)}
-                disabled={Boolean(answer)}
+                onClick={() => onSelectOption(option)}
+                disabled={isAnswerChecked}
+                aria-pressed={isSelected}
               >
-                {option.meaning}
+                <span>{option.meaning}</span>
+                {statusLabel ? (
+                  <span className={styles.answerOptionStatus}>
+                    {statusLabel}
+                  </span>
+                ) : null}
               </button>
             );
           })}
         </div>
 
-        {answer ? (
-          <div className={styles.answerFeedback} aria-live="polite">
-            <strong>{answer.isCorrect ? "정답입니다" : "오답입니다"}</strong>
-            <span>{`정답: ${answer.correctMeaning}`}</span>
-          </div>
-        ) : null}
-
-        <button
-          className={styles.primaryButton}
-          type="button"
-          onClick={handleNextClick}
-          disabled={!answer}
-        >
-          {isLastQuestion ? "결과 보기" : "다음 문제"}
-        </button>
+        <div className={styles.quizActionBar}>
+          <button
+            className={styles.primaryButton}
+            type="button"
+            onClick={handleNextClick}
+            disabled={!selectedOptionId}
+          >
+            {isAnswerChecked ? "Next Question" : "Check Answer"}
+          </button>
+        </div>
       </div>
     </section>
   );
+}
+
+type OptionStatusLabelParams = {
+  answer: WordQuizAnswer | null;
+  isCorrectOption: boolean;
+  optionId: string;
+};
+
+function getOptionStatusLabel({
+  answer,
+  isCorrectOption,
+  optionId,
+}: OptionStatusLabelParams) {
+  if (!answer) {
+    return null;
+  }
+
+  if (isCorrectOption) {
+    return "✓";
+  }
+
+  if (answer.selectedOptionId === optionId) {
+    return "×";
+  }
+
+  return null;
 }

@@ -81,11 +81,13 @@ export function WordStudy() {
       <WordQuiz
         answer={quiz.currentAnswer}
         currentIndex={quiz.currentIndex}
+        selectedOptionId={quiz.currentSelectedOptionId}
         question={quiz.currentQuestion}
         totalQuestions={quiz.questions.length}
+        onCheckAnswer={quiz.checkAnswer}
         onComplete={showQuizResults}
         onNextQuestion={quiz.moveToNextQuestion}
-        onSelectAnswer={quiz.selectAnswer}
+        onSelectOption={quiz.selectOption}
       />
     );
   }
