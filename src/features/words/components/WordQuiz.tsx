@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type {
   WordQuizAnswer,
+  WordQuizMode,
   WordQuizOption,
   WordQuizQuestion,
 } from "../hooks/useWordQuiz";
@@ -12,6 +13,7 @@ import styles from "./WordStudy.module.scss";
 type WordQuizProps = {
   answer: WordQuizAnswer | null;
   currentIndex: number;
+  mode: WordQuizMode;
   selectedOptionId: string | null;
   question: WordQuizQuestion;
   totalQuestions: number;
@@ -24,6 +26,7 @@ type WordQuizProps = {
 export function WordQuiz({
   answer,
   currentIndex,
+  mode,
   selectedOptionId,
   question,
   totalQuestions,
@@ -32,11 +35,12 @@ export function WordQuiz({
   onNextQuestion,
   onSelectOption,
 }: WordQuizProps) {
-  const { speakText, stopSpeech } = useTextToSpeech();
+  const { isSpeechSupported, speakText, stopSpeech } = useTextToSpeech();
   const questionNumber = currentIndex + 1;
   const isLastQuestion = questionNumber >= totalQuestions;
   const progressPercent =
     totalQuestions > 0 ? (questionNumber / totalQuestions) * 100 : 0;
+  const isListeningQuiz = mode === "listening";
 
   useEffect(() => {
     return stopSpeech;
@@ -55,28 +59,47 @@ export function WordQuiz({
 
     onNextQuestion();
   };
+
+  const speakCurrentWord = () => {
+    speakText(
+      question.word.word,
+      question.word.language,
+      isListeningQuiz ? "en-US" : undefined,
+    );
+  };
+
   const isAnswerChecked = Boolean(answer);
 
   return (
     <section className={styles.quiz} aria-label="Word quiz">
       <header className={styles.quizHeader}>
         <div className={styles.quizTitle}>
-          <span className={styles.kicker}>Quiz</span>
-          <h2>{question.word.word}</h2>
-          <span className={styles.pronunciation}>
-            {`[ ${question.word.pronunciation} ]`}
+          <span className={styles.kicker}>
+            {isListeningQuiz ? "Listening Quiz" : "Quiz"}
           </span>
+          {isListeningQuiz ? (
+            <h2>듣고 맞추기</h2>
+          ) : (
+            <>
+              <h2>{question.word.word}</h2>
+              <span className={styles.pronunciation}>
+                {`[ ${question.word.pronunciation} ]`}
+              </span>
+            </>
+          )}
         </div>
 
         <div className={styles.quizHeaderActions}>
-          <button
-            className={styles.quizAudioButton}
-            type="button"
-            aria-label={`${question.word.word} pronunciation`}
-            onClick={() => speakText(question.word.word, question.word.language)}
-          >
-            🔊
-          </button>
+          {isListeningQuiz ? null : (
+            <button
+              className={styles.quizAudioButton}
+              type="button"
+              aria-label={`${question.word.word} pronunciation`}
+              onClick={speakCurrentWord}
+            >
+              🔊
+            </button>
+          )}
           <div className={styles.studyCount}>
             {questionNumber} / {totalQuestions}
           </div>
@@ -95,6 +118,25 @@ export function WordQuiz({
       </header>
 
       <div className={styles.quizBody}>
+        {isListeningQuiz ? (
+          <div className={styles.listeningPrompt}>
+            <button
+              className={styles.listeningAudioButton}
+              type="button"
+              aria-label="Play word audio"
+              onClick={speakCurrentWord}
+              disabled={isSpeechSupported === false}
+            >
+              🔊
+            </button>
+            {isSpeechSupported === false ? (
+              <p className={styles.ttsUnsupported}>
+                이 브라우저는 음성 재생을 지원하지 않습니다.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className={styles.answerGrid}>
           {question.options.map((option) => {
             const isSelected = selectedOptionId === option.id;

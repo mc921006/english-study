@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import type { WordLanguage } from "@/types/word";
 
 const speechLanguageByWordLanguage: Record<WordLanguage, string> = {
@@ -11,6 +11,11 @@ const speechLanguageByWordLanguage: Record<WordLanguage, string> = {
 export function useTextToSpeech() {
   const activeSpeechKeyRef = useRef<string | null>(null);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const isSpeechSupported = useSyncExternalStore(
+    subscribeToSpeechSupport,
+    getSpeechSupportSnapshot,
+    getSpeechSupportServerSnapshot,
+  );
 
   const stopSpeech = useCallback(() => {
     activeSpeechKeyRef.current = null;
@@ -30,50 +35,43 @@ export function useTextToSpeech() {
     [],
   );
 
-  const speakText = useCallback((text: string, language: WordLanguage) => {
-    const trimmedText = text.trim();
-    const speechSynthesis = getSpeechSynthesis();
+  const speakText = useCallback(
+    (text: string, language: WordLanguage, speechLanguage?: string) => {
+      const trimmedText = text.trim();
+      const speechSynthesis = getSpeechSynthesis();
 
-    if (!trimmedText || !speechSynthesis) {
-      return;
-    }
+      if (!trimmedText || !speechSynthesis) {
+        return;
+      }
 
-    const speechKey = `${language}:${trimmedText}`;
+      const speechKey = `${language}:${trimmedText}`;
 
-    if (
-      activeSpeechKeyRef.current === speechKey &&
-      activeUtteranceRef.current !== null
-    ) {
-      return;
-    }
-
-    if (
-      activeSpeechKeyRef.current !== null ||
-      speechSynthesis.speaking ||
-      speechSynthesis.pending
-    ) {
+      activeSpeechKeyRef.current = null;
+      activeUtteranceRef.current = null;
       speechSynthesis.cancel();
-    }
 
-    const utterance = new SpeechSynthesisUtterance(trimmedText);
-    utterance.lang = speechLanguageByWordLanguage[language];
-    utterance.onend = () => {
-      clearActiveUtterance(utterance);
-    };
-    utterance.onerror = () => {
-      clearActiveUtterance(utterance);
-    };
+      const utterance = new SpeechSynthesisUtterance(trimmedText);
+      utterance.lang = speechLanguage ?? speechLanguageByWordLanguage[language];
+      utterance.onend = () => {
+        clearActiveUtterance(utterance);
+      };
+      utterance.onerror = () => {
+        clearActiveUtterance(utterance);
+      };
 
-    activeSpeechKeyRef.current = speechKey;
-    activeUtteranceRef.current = utterance;
-    speechSynthesis.speak(utterance);
-  }, [clearActiveUtterance]);
+      activeSpeechKeyRef.current = speechKey;
+      activeUtteranceRef.current = utterance;
+      speechSynthesis.speak(utterance);
+    },
+    [clearActiveUtterance],
+  );
 
   useEffect(() => {
     return stopSpeech;
   }, [stopSpeech]);
 
   return {
+    isSpeechSupported,
     speakText,
     stopSpeech,
   };
@@ -89,4 +87,16 @@ function getSpeechSynthesis() {
   }
 
   return window.speechSynthesis;
+}
+
+function subscribeToSpeechSupport() {
+  return () => {};
+}
+
+function getSpeechSupportSnapshot() {
+  return getSpeechSynthesis() !== null;
+}
+
+function getSpeechSupportServerSnapshot() {
+  return null;
 }

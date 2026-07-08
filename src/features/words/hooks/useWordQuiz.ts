@@ -4,6 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 import { getWordMeaningsByLanguage } from "@/services/words";
 import type { Word, WordLanguage } from "@/types/word";
 
+export type WordQuizMode = "meaning" | "listening";
+
 export type WordQuizOption = {
   id: string;
   meaning: string;

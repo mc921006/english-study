@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useStudyLanguage } from "@/features/language/context/LanguageProvider";
 import { DailyStudyProgress } from "./DailyStudyProgress";
 import { DailyStudySetup } from "./DailyStudySetup";
@@ -8,11 +9,12 @@ import { StudyCard } from "./StudyCard";
 import { StudyCompletion } from "./StudyCompletion";
 import { WordQuiz } from "./WordQuiz";
 import { useDailyStudy } from "../hooks/useDailyStudy";
-import { useWordQuiz } from "../hooks/useWordQuiz";
+import { type WordQuizMode, useWordQuiz } from "../hooks/useWordQuiz";
 import styles from "./WordStudy.module.scss";
 
 export function WordStudy() {
   const { language } = useStudyLanguage();
+  const [quizMode, setQuizMode] = useState<WordQuizMode>("meaning");
   const {
     status,
     study,
@@ -63,6 +65,8 @@ export function WordStudy() {
       <StudyCompletion
         errorMessage={quiz.errorMessage}
         isLoading={quiz.isLoading}
+        quizMode={quizMode}
+        onQuizModeChange={setQuizMode}
         onStartQuiz={startQuiz}
       />
     );
@@ -81,6 +85,7 @@ export function WordStudy() {
       <WordQuiz
         answer={quiz.currentAnswer}
         currentIndex={quiz.currentIndex}
+        mode={quizMode}
         selectedOptionId={quiz.currentSelectedOptionId}
         question={quiz.currentQuestion}
         totalQuestions={quiz.questions.length}
