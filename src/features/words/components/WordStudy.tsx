@@ -34,7 +34,7 @@ export function WordStudy() {
   const quiz = useWordQuiz(study?.words ?? [], language.wordLanguage);
 
   const startQuiz = async () => {
-    const isQuizReady = await quiz.startQuiz();
+    const isQuizReady = await quiz.startQuiz(quizMode);
 
     if (isQuizReady) {
       showQuiz();
@@ -42,7 +42,7 @@ export function WordStudy() {
   };
 
   const retryQuiz = async () => {
-    const isQuizReady = await quiz.retryQuiz();
+    const isQuizReady = await quiz.retryQuiz(quizMode);
 
     if (isQuizReady) {
       showQuiz();
@@ -90,6 +90,7 @@ export function WordStudy() {
         question={quiz.currentQuestion}
         totalQuestions={quiz.questions.length}
         onCheckAnswer={quiz.checkAnswer}
+        onCheckListeningAnswer={quiz.checkListeningAnswer}
         onComplete={showQuizResults}
         onNextQuestion={quiz.moveToNextQuestion}
         onSelectOption={quiz.selectOption}

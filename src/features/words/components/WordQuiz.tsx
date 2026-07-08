@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useEffect,
+  useState,
+} from "react";
 import type {
   WordQuizAnswer,
   WordQuizMode,
@@ -18,6 +23,7 @@ type WordQuizProps = {
   question: WordQuizQuestion;
   totalQuestions: number;
   onCheckAnswer: () => void;
+  onCheckListeningAnswer: (typedAnswer: string) => void;
   onComplete: () => void;
   onNextQuestion: () => void;
   onSelectOption: (option: WordQuizOption) => void;
@@ -31,16 +37,23 @@ export function WordQuiz({
   question,
   totalQuestions,
   onCheckAnswer,
+  onCheckListeningAnswer,
   onComplete,
   onNextQuestion,
   onSelectOption,
 }: WordQuizProps) {
   const { isSpeechSupported, speakText, stopSpeech } = useTextToSpeech();
+  const [listeningInput, setListeningInput] = useState({
+    questionId: question.id,
+    value: "",
+  });
   const questionNumber = currentIndex + 1;
   const isLastQuestion = questionNumber >= totalQuestions;
   const progressPercent =
     totalQuestions > 0 ? (questionNumber / totalQuestions) * 100 : 0;
   const isListeningQuiz = mode === "listening";
+  const listeningAnswer =
+    listeningInput.questionId === question.id ? listeningInput.value : "";
 
   useEffect(() => {
     return stopSpeech;
@@ -48,7 +61,12 @@ export function WordQuiz({
 
   const handleNextClick = () => {
     if (!answer) {
-      onCheckAnswer();
+      if (isListeningQuiz) {
+        onCheckListeningAnswer(listeningAnswer);
+      } else {
+        onCheckAnswer();
+      }
+
       return;
     }
 
@@ -68,7 +86,30 @@ export function WordQuiz({
     );
   };
 
+  const changeListeningAnswer = (event: ChangeEvent<HTMLInputElement>) => {
+    setListeningInput({
+      questionId: question.id,
+      value: event.target.value,
+    });
+  };
+
+  const handleListeningInputKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key !== "Enter" || answer || !listeningAnswer.trim()) {
+      return;
+    }
+
+    event.preventDefault();
+    onCheckListeningAnswer(listeningAnswer);
+  };
+
   const isAnswerChecked = Boolean(answer);
+  const isActionDisabled = isAnswerChecked
+    ? false
+    : isListeningQuiz
+      ? !listeningAnswer.trim()
+      : !selectedOptionId;
 
   return (
     <section className={styles.quiz} aria-label="Word quiz">
@@ -123,70 +164,109 @@ export function WordQuiz({
             <button
               className={styles.listeningAudioButton}
               type="button"
-              aria-label="Play word audio"
               onClick={speakCurrentWord}
               disabled={isSpeechSupported === false}
             >
-              🔊
+              <span aria-hidden="true">🔊</span>
+              <span>듣기</span>
             </button>
             {isSpeechSupported === false ? (
               <p className={styles.ttsUnsupported}>
                 이 브라우저는 음성 재생을 지원하지 않습니다.
               </p>
             ) : null}
-          </div>
-        ) : null}
-
-        <div className={styles.answerGrid}>
-          {question.options.map((option) => {
-            const isSelected = selectedOptionId === option.id;
-            const isCorrectOption = option.id === question.correctOptionId;
-            const isSelectedIncorrect =
-              answer?.selectedOptionId === option.id && !isCorrectOption;
-            const optionClassName = [
-              styles.answerOption,
-              isSelected && !isAnswerChecked ? styles.answerOptionSelected : "",
-              isAnswerChecked && isCorrectOption
-                ? styles.answerOptionCorrect
-                : "",
-              isAnswerChecked && isSelectedIncorrect
-                ? styles.answerOptionIncorrect
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ");
-            const statusLabel = getOptionStatusLabel({
-              answer,
-              isCorrectOption,
-              optionId: option.id,
-            });
-
-            return (
-              <button
-                className={optionClassName}
-                key={option.id}
-                type="button"
-                onClick={() => onSelectOption(option)}
+            <label
+              className={styles.listeningInputGroup}
+              htmlFor={`listening-answer-${currentIndex}`}
+            >
+              <span className={styles.controlLabel}>들은 단어 입력</span>
+              <input
+                className={styles.listeningInput}
+                id={`listening-answer-${currentIndex}`}
+                type="text"
+                value={listeningAnswer}
+                onChange={changeListeningAnswer}
+                onKeyDown={handleListeningInputKeyDown}
                 disabled={isAnswerChecked}
-                aria-pressed={isSelected}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            {answer ? (
+              <p
+                className={
+                  answer.isCorrect
+                    ? styles.listeningFeedbackCorrect
+                    : styles.listeningFeedbackIncorrect
+                }
               >
-                <span>{option.meaning}</span>
-                {statusLabel ? (
-                  <span className={styles.answerOptionStatus}>
-                    {statusLabel}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
+                {answer.isCorrect ? (
+                  "정답입니다."
+                ) : (
+                  <>
+                    <span>오답입니다.</span>{" "}
+                    <span className={styles.listeningCorrectAnswer}>
+                      정답 : {answer.correctWord ?? question.word.word}
+                    </span>
+                  </>
+                )}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div className={styles.answerGrid}>
+            {question.options.map((option) => {
+              const isSelected = selectedOptionId === option.id;
+              const isCorrectOption = option.id === question.correctOptionId;
+              const isSelectedIncorrect =
+                answer?.selectedOptionId === option.id && !isCorrectOption;
+              const optionClassName = [
+                styles.answerOption,
+                isSelected && !isAnswerChecked
+                  ? styles.answerOptionSelected
+                  : "",
+                isAnswerChecked && isCorrectOption
+                  ? styles.answerOptionCorrect
+                  : "",
+                isAnswerChecked && isSelectedIncorrect
+                  ? styles.answerOptionIncorrect
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              const statusLabel = getOptionStatusLabel({
+                answer,
+                isCorrectOption,
+                optionId: option.id,
+              });
+
+              return (
+                <button
+                  className={optionClassName}
+                  key={option.id}
+                  type="button"
+                  onClick={() => onSelectOption(option)}
+                  disabled={isAnswerChecked}
+                  aria-pressed={isSelected}
+                >
+                  <span>{option.meaning}</span>
+                  {statusLabel ? (
+                    <span className={styles.answerOptionStatus}>
+                      {statusLabel}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className={styles.quizActionBar}>
           <button
             className={styles.primaryButton}
             type="button"
             onClick={handleNextClick}
-            disabled={!selectedOptionId}
+            disabled={isActionDisabled}
           >
             {isAnswerChecked ? "Next Question" : "Check Answer"}
           </button>

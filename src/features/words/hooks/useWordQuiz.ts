@@ -20,9 +20,11 @@ export type WordQuizQuestion = {
 };
 
 export type WordQuizAnswer = {
-  selectedOptionId: string;
-  selectedMeaning: string;
-  correctMeaning: string;
+  selectedOptionId?: string;
+  selectedMeaning?: string;
+  typedAnswer?: string;
+  correctMeaning?: string;
+  correctWord?: string;
   isCorrect: boolean;
 };
 
@@ -45,14 +47,20 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const startQuiz = useCallback(async () => {
+  const startQuiz = useCallback(async (mode: WordQuizMode = "meaning") => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      const candidateMeanings = await getWordMeaningsByLanguage(language);
+      const nextQuestions =
+        mode === "listening"
+          ? createListeningQuizQuestions(words)
+          : createMeaningQuizQuestions(
+              words,
+              await getWordMeaningsByLanguage(language),
+            );
 
-      setQuestions(createQuizQuestions(words, candidateMeanings));
+      setQuestions(nextQuestions);
       setCurrentIndex(0);
       setAnswers([]);
       setSelectedOptionIds([]);
@@ -128,6 +136,34 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
     });
   }, [currentIndex, questions, selectedOptionIds]);
 
+  const checkListeningAnswer = useCallback(
+    (typedAnswer: string) => {
+      const question = questions[currentIndex];
+
+      if (!question || !typedAnswer.trim()) {
+        return;
+      }
+
+      setAnswers((currentAnswers) => {
+        if (currentAnswers[currentIndex]) {
+          return currentAnswers;
+        }
+
+        const nextAnswers = [...currentAnswers];
+        nextAnswers[currentIndex] = {
+          typedAnswer: typedAnswer.trim(),
+          correctWord: question.word.word,
+          isCorrect:
+            normalizeWordAnswer(typedAnswer) ===
+            normalizeWordAnswer(question.word.word),
+        };
+
+        return nextAnswers;
+      });
+    },
+    [currentIndex, questions],
+  );
+
   const moveToNextQuestion = useCallback(() => {
     setCurrentIndex((index) => Math.min(index + 1, questions.length - 1));
   }, [questions.length]);
@@ -166,6 +202,7 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
       retryQuiz: startQuiz,
       selectOption,
       checkAnswer,
+      checkListeningAnswer,
       moveToNextQuestion,
     }),
     [
@@ -179,12 +216,23 @@ export function useWordQuiz(words: Word[], language: WordLanguage) {
       startQuiz,
       selectOption,
       checkAnswer,
+      checkListeningAnswer,
       moveToNextQuestion,
     ],
   );
 }
 
-function createQuizQuestions(words: Word[], candidateMeanings: string[]) {
+function createListeningQuizQuestions(words: Word[]) {
+  return shuffle(words).map((word, wordIndex) => ({
+    id: `${wordIndex}-${word.word}`,
+    word,
+    options: [],
+    correctOptionId: "",
+    correctMeaning: word.meaning,
+  }));
+}
+
+function createMeaningQuizQuestions(words: Word[], candidateMeanings: string[]) {
   return shuffle(words).map((word, wordIndex) => {
     const correctOption: WordQuizOption = {
       id: `${wordIndex}-correct`,
@@ -255,6 +303,10 @@ function getUniqueMeanings(meanings: string[]) {
 
 function normalizeMeaning(meaning: string) {
   return meaning.trim().toLocaleLowerCase("ko-KR");
+}
+
+function normalizeWordAnswer(answer: string) {
+  return answer.trim().toLocaleLowerCase("en-US");
 }
 
 function shuffle<T>(items: T[]) {
