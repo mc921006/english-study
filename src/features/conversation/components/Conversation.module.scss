@@ -198,28 +198,13 @@
   cursor: not-allowed;
 }
 
-.translationText,
-.translationStatus,
-.translationError {
+.translationText {
   margin: 0;
   font-size: 0.94rem;
   line-height: 1.55;
-}
-
-.translationText {
   border-left: 3px solid var(--color-accent);
   padding-left: $space-3;
   color: var(--color-foreground);
-  font-weight: 800;
-}
-
-.translationStatus {
-  color: var(--color-muted);
-  font-weight: 800;
-}
-
-.translationError {
-  color: #b42318;
   font-weight: 800;
 }
 

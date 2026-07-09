@@ -8,12 +8,14 @@ import type {
 function createQuestion(
   topic: ConversationTopic,
   text: string,
+  translation: string,
   turnIndex: number,
 ): ConversationQuestion {
   return {
     id: `${topic.id}-${turnIndex + 1}`,
     topicId: topic.id,
     text,
+    translation,
     turnIndex,
   };
 }
@@ -29,14 +31,15 @@ export async function getConversationQuestion(
   });
   const result = (await response.json()) as {
     question?: string;
+    translation?: string;
     error?: string;
   };
 
-  if (!response.ok || !result.question) {
+  if (!response.ok || !result.question || !result.translation) {
     throw new Error(result.error ?? "질문을 생성하지 못했습니다.");
   }
 
-  return createQuestion(topic, result.question, 0);
+  return createQuestion(topic, result.question, result.translation, 0);
 }
 
 export async function submitAnswer({
@@ -72,25 +75,8 @@ export async function submitAnswer({
     nextQuestion: createQuestion(
       topic,
       result.feedback.nextQuestion,
+      result.feedback.nextQuestionTranslation,
       question.turnIndex + 1,
     ),
   };
-}
-
-export async function translateConversationQuestion(question: string) {
-  const response = await fetch("/api/conversation/translate-question", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
-  });
-  const result = (await response.json()) as {
-    translation?: string;
-    error?: string;
-  };
-
-  if (!response.ok || !result.translation) {
-    throw new Error(result.error ?? "번역을 불러오지 못했습니다.");
-  }
-
-  return result.translation;
 }

@@ -9,6 +9,7 @@ export type ConversationQuestion = {
   id: string;
   topicId: string;
   text: string;
+  translation: string;
   turnIndex: number;
 };
 
@@ -21,6 +22,7 @@ export type ConversationFeedback = {
   koreanExplanation: string;
   nextTip: string;
   nextQuestion: string;
+  nextQuestionTranslation: string;
 };
 
 export type SubmitConversationAnswerRequest = {

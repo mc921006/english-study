@@ -64,6 +64,7 @@ export async function POST(request: Request) {
             "betterExpression must be a more natural English version that the learner can reuse.",
             "nextQuestion must naturally continue the same topic using the previous question and user answer.",
             "nextQuestion must be one English question and must not repeat the current question.",
+            "nextQuestionTranslation must be a natural Korean translation of nextQuestion.",
             "Use simple A2-B1 English for nextQuestion when no CEFR level is provided.",
             "nextQuestion must not repeat, closely paraphrase, or ask for almost the same answer as any previousQuestions item.",
             "If previousQuestions is not empty, choose a meaning, wording, opening pattern, and question type that are clearly different from the recent items.",
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
             koreanExplanation: { type: "string" },
             nextTip: { type: "string" },
             nextQuestion: { type: "string" },
+            nextQuestionTranslation: { type: "string" },
           },
           required: [
             "goodPoint",
@@ -109,6 +111,7 @@ export async function POST(request: Request) {
             "koreanExplanation",
             "nextTip",
             "nextQuestion",
+            "nextQuestionTranslation",
           ],
         },
       },
@@ -227,6 +230,7 @@ function isConversationFeedback(value: unknown): value is ConversationFeedback {
     typeof feedback.betterExpression === "string" &&
     typeof feedback.koreanExplanation === "string" &&
     typeof feedback.nextTip === "string" &&
-    typeof feedback.nextQuestion === "string"
+    typeof feedback.nextQuestion === "string" &&
+    typeof feedback.nextQuestionTranslation === "string"
   );
 }

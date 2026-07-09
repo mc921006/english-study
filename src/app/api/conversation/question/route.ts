@@ -26,13 +26,13 @@ export async function POST(request: Request) {
     const variationSeed = crypto.randomUUID();
     const result = await generateJsonWithAI({
       requireOpenRouter: true,
-      maxTokens: 300,
+      maxTokens: 500,
       messages: [
         {
           role: "system",
           content: [
             "You are an English conversation teacher for Korean learners.",
-            "Create one natural English conversation question.",
+            "Create one natural English conversation question and its Korean translation.",
             "Return JSON only.",
           ].join(" "),
         },
@@ -42,7 +42,8 @@ export async function POST(request: Request) {
             "Generate a fresh question for text-based English conversation practice.",
             "The learner only selected a topic, not a CEFR level.",
             "Use simple A2-B1 English suitable for beginner to intermediate learners.",
-            "Write exactly one natural real-world conversation question.",
+            "Write exactly one natural real-world English conversation question in question.",
+            "Write a natural Korean translation of that exact English question in translation.",
             "The question must stay clearly related to the selected topic.",
             "Do not repeat, closely paraphrase, or ask for almost the same answer as any previousQuestions item.",
             "If previousQuestions is not empty, choose a meaning, wording, opening pattern, and question type that are clearly different from the recent items.",
@@ -68,8 +69,9 @@ export async function POST(request: Request) {
           additionalProperties: false,
           properties: {
             question: { type: "string" },
+            translation: { type: "string" },
           },
-          required: ["question"],
+          required: ["question", "translation"],
         },
       },
     });
@@ -78,7 +80,10 @@ export async function POST(request: Request) {
       throw new Error("AI response had an invalid shape.");
     }
 
-    return NextResponse.json({ question: result.question.trim() });
+    return NextResponse.json({
+      question: result.question.trim(),
+      translation: result.translation.trim(),
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Request failed." },
@@ -140,10 +145,12 @@ function formatPreviousQuestions(questions: string[]) {
 
 function isConversationQuestionResponse(value: unknown): value is {
   question: string;
+  translation: string;
 } {
   return (
     Boolean(value) &&
     typeof value === "object" &&
-    typeof (value as { question?: unknown }).question === "string"
+    typeof (value as { question?: unknown }).question === "string" &&
+    typeof (value as { translation?: unknown }).translation === "string"
   );
 }
