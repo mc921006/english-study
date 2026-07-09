@@ -20,6 +20,12 @@ function findTopic(topicId: string): ConversationTopic | undefined {
   return conversationTopics.find((topic) => topic.id === topicId);
 }
 
+const RECENT_QUESTION_LIMIT = 12;
+
+function normalizeQuestionText(text: string) {
+  return text.trim().replace(/\s+/g, " ");
+}
+
 export function ConversationPractice() {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] =
@@ -27,6 +33,9 @@ export function ConversationPractice() {
   const [latestTurn, setLatestTurn] = useState<ConversationTurn | null>(null);
   const [pendingNextQuestion, setPendingNextQuestion] =
     useState<ConversationQuestion | null>(null);
+  const [recentQuestionsByTopic, setRecentQuestionsByTopic] = useState<
+    Record<string, string[]>
+  >({});
   const [isQuestionLoading, setIsQuestionLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -35,9 +44,37 @@ export function ConversationPractice() {
 
   const selectedTopic = selectedTopicId ? findTopic(selectedTopicId) : undefined;
 
+  function getRecentQuestions(topicId: string) {
+    return recentQuestionsByTopic[topicId] ?? [];
+  }
+
+  function rememberQuestion(topicId: string, text: string) {
+    const normalizedQuestion = normalizeQuestionText(text);
+
+    if (!normalizedQuestion) {
+      return;
+    }
+
+    setRecentQuestionsByTopic((questionsByTopic) => {
+      const topicQuestions = questionsByTopic[topicId] ?? [];
+      const dedupedQuestions = topicQuestions.filter(
+        (question) =>
+          question.toLowerCase() !== normalizedQuestion.toLowerCase(),
+      );
+
+      return {
+        ...questionsByTopic,
+        [topicId]: [...dedupedQuestions, normalizedQuestion].slice(
+          -RECENT_QUESTION_LIMIT,
+        ),
+      };
+    });
+  }
+
   async function loadFirstQuestion(topic: ConversationTopic) {
     const requestId = latestQuestionRequestId.current + 1;
     latestQuestionRequestId.current = requestId;
+    const previousQuestions = getRecentQuestions(topic.id);
 
     setCurrentQuestion(null);
     setLatestTurn(null);
@@ -46,13 +83,14 @@ export function ConversationPractice() {
     setIsQuestionLoading(true);
 
     try {
-      const question = await getConversationQuestion(topic);
+      const question = await getConversationQuestion(topic, previousQuestions);
 
       if (latestQuestionRequestId.current !== requestId) {
         return;
       }
 
       setCurrentQuestion(question);
+      rememberQuestion(topic.id, question.text);
     } catch (error) {
       if (latestQuestionRequestId.current !== requestId) {
         return;
@@ -106,6 +144,7 @@ export function ConversationPractice() {
         topic: selectedTopic,
         question: currentQuestion,
         answer,
+        previousQuestions: getRecentQuestions(selectedTopic.id),
       });
 
       if (latestAnswerRequestId.current !== requestId) {
@@ -121,6 +160,7 @@ export function ConversationPractice() {
 
       setLatestTurn(nextTurn);
       setPendingNextQuestion(result.nextQuestion);
+      rememberQuestion(selectedTopic.id, result.nextQuestion.text);
       return true;
     } catch (error) {
       if (latestAnswerRequestId.current !== requestId) {

@@ -20,11 +20,12 @@ function createQuestion(
 
 export async function getConversationQuestion(
   topic: ConversationTopic,
+  previousQuestions: string[] = [],
 ): Promise<ConversationQuestion> {
   const response = await fetch("/api/conversation/question", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic }),
+    body: JSON.stringify({ topic, previousQuestions }),
   });
   const result = (await response.json()) as {
     question?: string;
@@ -42,6 +43,7 @@ export async function submitAnswer({
   topic,
   question,
   answer,
+  previousQuestions = [],
 }: SubmitConversationAnswerRequest): Promise<SubmitConversationAnswerResult> {
   const response = await fetch("/api/conversation/answer", {
     method: "POST",
@@ -50,6 +52,7 @@ export async function submitAnswer({
       topic,
       question,
       answer,
+      previousQuestions,
     }),
   });
   const result = (await response.json()) as

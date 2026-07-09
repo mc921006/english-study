@@ -27,6 +27,7 @@ export type SubmitConversationAnswerRequest = {
   topic: ConversationTopic;
   question: ConversationQuestion;
   answer: string;
+  previousQuestions?: string[];
 };
 
 export type SubmitConversationAnswerResult = {

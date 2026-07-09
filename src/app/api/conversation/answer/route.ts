@@ -18,7 +18,10 @@ type ConversationAnswerRequest = {
   topic?: unknown;
   question?: unknown;
   answer?: unknown;
+  previousQuestions?: unknown;
 };
+
+const PREVIOUS_QUESTION_LIMIT = 12;
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +29,10 @@ export async function POST(request: Request) {
     const topic = requiredTopic(body.topic);
     const question = requiredQuestion(body.question);
     const answer = requiredAnswer(body.answer);
+    const previousQuestions = optionalStringArray(
+      body.previousQuestions,
+      "previousQuestions",
+    );
     const result = await generateJsonWithAI({
       requireOpenRouter: true,
       maxTokens: 1800,
@@ -57,6 +64,15 @@ export async function POST(request: Request) {
             "betterExpression must be a more natural English version that the learner can reuse.",
             "nextQuestion must naturally continue the same topic using the previous question and user answer.",
             "nextQuestion must be one English question and must not repeat the current question.",
+            "Use simple A2-B1 English for nextQuestion when no CEFR level is provided.",
+            "nextQuestion must not repeat, closely paraphrase, or ask for almost the same answer as any previousQuestions item.",
+            "If previousQuestions is not empty, choose a meaning, wording, opening pattern, and question type that are clearly different from the recent items.",
+            "Vary nextQuestion openings across options like: What, When, Where, Who, Which, Why, How, Do you, Have you, If...",
+            "Vary nextQuestion types across: daily routine, personal experience, habit, opinion, preference, memory, future plan, reason, comparison, problem solving, and imagination.",
+            "Within the same topic, choose a concrete sub-angle instead of staying broad.",
+            "For Daily Life, possible sub-angles include daily schedule, habits, recent experience, favorite time of day, something to improve, childhood comparison, future plan, weekday/weekend differences, morning/evening routine, and stress relief.",
+            "Avoid overused generic nextQuestion patterns like: What is your favorite...?, Do you like...?, What do you usually...?",
+            "Prefer a natural conversation flow from the learner's answer, but move to a new angle instead of a reworded follow-up.",
             "Keep Korean explanations short and beginner-friendly.",
             `Topic id: ${topic.id}`,
             `Topic title: ${topic.title}`,
@@ -65,6 +81,7 @@ export async function POST(request: Request) {
             `Current question: ${question.text}`,
             `Turn index: ${question.turnIndex}`,
             `User answer: ${answer}`,
+            `previousQuestions:\n${formatPreviousQuestions(previousQuestions)}`,
           ].join("\n"),
         },
       ],
@@ -166,6 +183,30 @@ function requiredString(value: unknown, fieldName: string) {
   }
 
   return value.trim();
+}
+
+function optionalStringArray(value: unknown, fieldName: string) {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be a string array.`);
+  }
+
+  return value
+    .map((item, index) => requiredString(item, `${fieldName}[${index}]`))
+    .slice(-PREVIOUS_QUESTION_LIMIT);
+}
+
+function formatPreviousQuestions(questions: string[]) {
+  if (questions.length === 0) {
+    return "None";
+  }
+
+  return questions
+    .map((question, index) => `${index + 1}. ${question}`)
+    .join("\n");
 }
 
 function isConversationFeedback(value: unknown): value is ConversationFeedback {

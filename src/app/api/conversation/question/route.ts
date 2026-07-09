@@ -10,12 +10,19 @@ type TopicPayload = {
 
 type ConversationQuestionRequest = {
   topic?: unknown;
+  previousQuestions?: unknown;
 };
+
+const PREVIOUS_QUESTION_LIMIT = 12;
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ConversationQuestionRequest;
     const topic = requiredTopic(body.topic);
+    const previousQuestions = optionalStringArray(
+      body.previousQuestions,
+      "previousQuestions",
+    );
     const variationSeed = crypto.randomUUID();
     const result = await generateJsonWithAI({
       requireOpenRouter: true,
@@ -32,17 +39,25 @@ export async function POST(request: Request) {
         {
           role: "user",
           content: [
-            "Generate a fresh first question for text-based English conversation practice.",
+            "Generate a fresh question for text-based English conversation practice.",
             "The learner only selected a topic, not a CEFR level.",
-            "Use simple, natural English suitable for a broad range of learners.",
-            "Do not reuse a fixed starter question.",
-            "Write exactly one question.",
-            "The question must match the selected topic.",
+            "Use simple A2-B1 English suitable for beginner to intermediate learners.",
+            "Write exactly one natural real-world conversation question.",
+            "The question must stay clearly related to the selected topic.",
+            "Do not repeat, closely paraphrase, or ask for almost the same answer as any previousQuestions item.",
+            "If previousQuestions is not empty, choose a meaning, wording, opening pattern, and question type that are clearly different from the recent items.",
+            "Vary question openings across options like: What, When, Where, Who, Which, Why, How, Do you, Have you, If...",
+            "Vary question types across: daily routine, personal experience, habit, opinion, preference, memory, future plan, reason, comparison, problem solving, and imagination.",
+            "Within the same topic, choose a concrete sub-angle instead of staying broad.",
+            "For Daily Life, possible sub-angles include daily schedule, habits, recent experience, favorite time of day, something to improve, childhood comparison, future plan, weekday/weekend differences, morning/evening routine, and stress relief.",
+            "Avoid overused generic patterns like: What is your favorite...?, Do you like...?, What do you usually...?",
+            "When previousQuestions exist, consider a natural conversation flow from the latest question, but ask a new angle instead of a reworded follow-up.",
             `Variation seed: ${variationSeed}`,
             `Topic id: ${topic.id}`,
             `Topic title: ${topic.title}`,
             `Topic Korean label: ${topic.subtitle}`,
             `Topic description: ${topic.description}`,
+            `previousQuestions:\n${formatPreviousQuestions(previousQuestions)}`,
           ].join("\n"),
         },
       ],
@@ -97,6 +112,30 @@ function requiredString(value: unknown, fieldName: string) {
   }
 
   return value.trim();
+}
+
+function optionalStringArray(value: unknown, fieldName: string) {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be a string array.`);
+  }
+
+  return value
+    .map((item, index) => requiredString(item, `${fieldName}[${index}]`))
+    .slice(-PREVIOUS_QUESTION_LIMIT);
+}
+
+function formatPreviousQuestions(questions: string[]) {
+  if (questions.length === 0) {
+    return "None";
+  }
+
+  return questions
+    .map((question, index) => `${index + 1}. ${question}`)
+    .join("\n");
 }
 
 function isConversationQuestionResponse(value: unknown): value is {
