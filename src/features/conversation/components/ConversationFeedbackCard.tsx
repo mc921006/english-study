@@ -12,7 +12,7 @@ export function ConversationFeedbackCard({
     <article className={styles.feedbackCard}>
       <div className={styles.feedbackHeader}>
         <span className={styles.kicker}>Feedback</span>
-        <h3>AI 영어 선생님 피드백</h3>
+        <h3>Emma의 피드백</h3>
       </div>
 
       <div className={styles.feedbackGrid}>

@@ -107,12 +107,17 @@
   background: var(--color-surface);
 }
 
-.aiMessage span,
-.userMessage span {
-  color: var(--color-muted);
-  font-size: 0.78rem;
+.messageHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  align-items: baseline;
+}
+
+.messageSpeaker {
+  color: var(--color-accent);
+  font-size: 0.9rem;
   font-weight: 900;
-  text-transform: uppercase;
 }
 
 .aiMessage p,
@@ -163,6 +168,59 @@
   font-size: 0.88rem;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.translationPanel {
+  display: grid;
+  justify-items: start;
+  gap: $space-2;
+}
+
+.translationToggle {
+  min-height: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: 0 $space-3;
+  color: var(--color-foreground);
+  background: var(--color-surface);
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.translationToggle:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.translationToggle:disabled {
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.translationText,
+.translationStatus,
+.translationError {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.translationText {
+  border-left: 3px solid var(--color-accent);
+  padding-left: $space-3;
+  color: var(--color-foreground);
+  font-weight: 800;
+}
+
+.translationStatus {
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.translationError {
+  color: #b42318;
+  font-weight: 800;
 }
 
 .feedbackCard {

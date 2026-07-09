@@ -76,3 +76,21 @@ export async function submitAnswer({
     ),
   };
 }
+
+export async function translateConversationQuestion(question: string) {
+  const response = await fetch("/api/conversation/translate-question", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
+  const result = (await response.json()) as {
+    translation?: string;
+    error?: string;
+  };
+
+  if (!response.ok || !result.translation) {
+    throw new Error(result.error ?? "번역을 불러오지 못했습니다.");
+  }
+
+  return result.translation;
+}
