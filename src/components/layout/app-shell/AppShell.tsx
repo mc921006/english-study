@@ -6,6 +6,7 @@ import {
   getAvailableStudyFeatures,
 } from "@/features/language/languageConfig";
 import { useStudyLanguage } from "@/features/language/context/LanguageProvider";
+import { APP_NAME } from "@/lib/appBranding";
 import styles from "./AppShell.module.scss";
 
 type AppShellProps = Readonly<{
@@ -13,7 +14,7 @@ type AppShellProps = Readonly<{
 }>;
 
 export function AppShell({ children }: AppShellProps) {
-  const { language, languageId } = useStudyLanguage();
+  const { languageId } = useStudyLanguage();
   const navigationItems = getAvailableStudyFeatures(languageId);
 
   return (
@@ -24,9 +25,9 @@ export function AppShell({ children }: AppShellProps) {
           <Link
             className={styles.brandLink}
             href="/"
-            aria-label={`${language.studyTitle} home`}
+            aria-label={`${APP_NAME} home`}
           >
-            <span className={styles.brandText}>{language.studyTitle}</span>
+            <span className={styles.brandText}>{APP_NAME}</span>
           </Link>
         </div>
 

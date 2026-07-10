@@ -8,6 +8,7 @@ import {
 import {
   getDefaultWordStudyLevel,
   type CefrLevel,
+  type JlptLevel,
   type WordLanguage,
   type WordStudyLevel,
 } from "@/types/word";
@@ -17,6 +18,12 @@ import styles from "./WordStudy.module.scss";
 const cefrLevelOptions: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 const cefrLevelItems: Array<SelectCardGridItem<CefrLevel>> =
   cefrLevelOptions.map((level) => ({
+    value: level,
+    title: level,
+  }));
+const japaneseLevelOptions: JlptLevel[] = ["N5", "N4", "N3", "N2", "N1"];
+const japaneseLevelItems: Array<SelectCardGridItem<JlptLevel>> =
+  japaneseLevelOptions.map((level) => ({
     value: level,
     title: level,
   }));
@@ -32,7 +39,7 @@ type DailyStudySetupProps = {
   errorMessage: string | null;
   isLoading: boolean;
   wordLanguage: WordLanguage;
-  onStart: (cefrLevel: WordStudyLevel, dailyCount: DailyStudyCount) => void;
+  onStart: (level: WordStudyLevel, dailyCount: DailyStudyCount) => void;
 };
 
 export function DailyStudySetup({
@@ -42,11 +49,13 @@ export function DailyStudySetup({
   onStart,
 }: DailyStudySetupProps) {
   const [cefrLevel, setCefrLevel] = useState<CefrLevel>("A1");
+  const [japaneseLevel, setJapaneseLevel] = useState<JlptLevel>("N5");
   const [dailyCount, setDailyCount] = useState<DailyStudyCount>(10);
-  const showsCefrLevel = wordLanguage === "en";
-  const selectedStudyLevel = showsCefrLevel
-    ? cefrLevel
-    : getDefaultWordStudyLevel(wordLanguage);
+  const selectedStudyLevel = getSelectedStudyLevel({
+    cefrLevel,
+    japaneseLevel,
+    wordLanguage,
+  });
 
   return (
     <section className={styles.setup} aria-label="Create daily study">
@@ -56,7 +65,7 @@ export function DailyStudySetup({
       </div>
 
       <div className={styles.setupSections}>
-        {showsCefrLevel ? (
+        {wordLanguage === "en" ? (
           <div className={styles.controlGroup}>
             <span className={styles.controlLabel}>CEFR 레벨</span>
             <SelectCardGrid
@@ -65,6 +74,19 @@ export function DailyStudySetup({
               selectedValue={cefrLevel}
               variant="compact"
               onSelect={setCefrLevel}
+            />
+          </div>
+        ) : null}
+
+        {wordLanguage === "ja" ? (
+          <div className={styles.controlGroup}>
+            <span className={styles.controlLabel}>JLPT 레벨</span>
+            <SelectCardGrid
+              ariaLabel="JLPT level"
+              items={japaneseLevelItems}
+              selectedValue={japaneseLevel}
+              variant="compact"
+              onSelect={setJapaneseLevel}
             />
           </div>
         ) : null}
@@ -93,4 +115,24 @@ export function DailyStudySetup({
       </button>
     </section>
   );
+}
+
+function getSelectedStudyLevel({
+  cefrLevel,
+  japaneseLevel,
+  wordLanguage,
+}: {
+  cefrLevel: CefrLevel;
+  japaneseLevel: JlptLevel;
+  wordLanguage: WordLanguage;
+}): WordStudyLevel {
+  if (wordLanguage === "en") {
+    return cefrLevel;
+  }
+
+  if (wordLanguage === "ja") {
+    return japaneseLevel;
+  }
+
+  return getDefaultWordStudyLevel(wordLanguage);
 }

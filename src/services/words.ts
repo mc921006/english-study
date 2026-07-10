@@ -7,22 +7,22 @@ import {
 } from "@/types/word";
 
 export type GetWordsParams = {
-  cefrLevel: WordStudyLevel;
+  level: WordStudyLevel;
   language?: WordLanguage;
   limit: number | "all";
 };
 
 export async function getWords({
-  cefrLevel,
+  level,
   language = defaultWordLanguage,
   limit,
 }: GetWordsParams): Promise<Word[]> {
   const { data, error } = await supabase
     .from("words")
     .select(
-      "word, meaning, example, example_meaning, pronunciation, part_of_speech, cefr_level, language",
+      "word, meaning, example, example_meaning, pronunciation, part_of_speech, level, language",
     )
-    .eq("cefr_level", cefrLevel)
+    .eq("level", level)
     .eq("language", language)
     .limit(1000);
 

@@ -1,8 +1,8 @@
 import type { WordLanguage } from "@/types/word";
 
-export type StudyLanguageId = "english" | "vietnamese";
+export type StudyLanguageId = "english" | "vietnamese" | "japanese";
 
-export type StudyFeatureId = "words" | "grammar" | "conversation";
+export type StudyFeatureId = "words" | "grammar" | "conversation" | "kana";
 
 export type StudyLanguage = {
   id: StudyLanguageId;
@@ -11,7 +11,7 @@ export type StudyLanguage = {
   studyTitle: string;
   mark: string;
   flag: string;
-  wordLanguage: WordLanguage;
+  wordLanguage?: WordLanguage;
   description: string;
   availableFeatures: StudyFeatureId[];
 };
@@ -21,7 +21,7 @@ export const studyLanguages: StudyLanguage[] = [
     id: "english",
     label: "영어",
     englishLabel: "English",
-    studyTitle: "English Study",
+    studyTitle: "English",
     mark: "EN",
     flag: "🇺🇸",
     wordLanguage: "en",
@@ -32,12 +32,23 @@ export const studyLanguages: StudyLanguage[] = [
     id: "vietnamese",
     label: "베트남어",
     englishLabel: "Vietnamese",
-    studyTitle: "Vietnamese Study",
+    studyTitle: "Vietnamese",
     mark: "VI",
     flag: "🇻🇳",
     wordLanguage: "vi",
     description: "현재는 단어 학습만 지원합니다.",
     availableFeatures: ["words"],
+  },
+  {
+    id: "japanese",
+    label: "일본어",
+    englishLabel: "Japanese",
+    studyTitle: "Japanese",
+    mark: "JP",
+    flag: "🇯🇵",
+    wordLanguage: "ja",
+    description: "히라가나/카타카나와 N5 단어를 학습합니다.",
+    availableFeatures: ["kana", "words"],
   },
 ];
 
@@ -65,6 +76,12 @@ export const studyFeatures: Array<{
     label: "Conversation",
     actionLabel: "Open conversation",
   },
+  {
+    id: "kana",
+    href: "/kana",
+    label: "Kana",
+    actionLabel: "Open kana",
+  },
 ];
 
 export const defaultStudyLanguageId: StudyLanguageId = "english";
@@ -83,7 +100,11 @@ export function isStudyLanguageId(value: string): value is StudyLanguageId {
 export function getAvailableStudyFeatures(languageId: StudyLanguageId) {
   const language = getStudyLanguage(languageId);
 
-  return studyFeatures.filter((feature) =>
-    language.availableFeatures.includes(feature.id),
-  );
+  return language.availableFeatures
+    .map((featureId) =>
+      studyFeatures.find((feature) => feature.id === featureId),
+    )
+    .filter((feature): feature is (typeof studyFeatures)[number] =>
+      Boolean(feature),
+    );
 }

@@ -79,11 +79,7 @@ export function WordQuiz({
   };
 
   const speakCurrentWord = () => {
-    speakText(
-      question.word.word,
-      question.word.language,
-      isListeningQuiz ? "en-US" : undefined,
-    );
+    speakText(question.word.word, question.word.language);
   };
 
   const changeListeningAnswer = (event: ChangeEvent<HTMLInputElement>) => {

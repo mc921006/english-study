@@ -23,7 +23,7 @@ type WordInsert = {
   example_meaning: string;
   pronunciation: string;
   part_of_speech: string;
-  cefr_level: VietnameseWordLevel;
+  level: VietnameseWordLevel;
   language: VietnameseWordLanguage;
 };
 
@@ -824,7 +824,7 @@ async function fetchExistingVietnameseWords(supabase: WordsSupabaseClient) {
       .from("words")
       .select("word")
       .eq("language", VIETNAMESE_WORD_LANGUAGE)
-      .eq("cefr_level", VIETNAMESE_WORD_LEVEL)
+      .eq("level", VIETNAMESE_WORD_LEVEL)
       .range(from, to);
 
     if (error) {
@@ -867,7 +867,7 @@ function toWordInsert(word: VietnameseSeedWord): WordInsert {
     example_meaning: word.example_meaning,
     pronunciation: word.pronunciation,
     part_of_speech: word.part_of_speech,
-    cefr_level: word.level,
+    level: word.level,
     language: word.language,
   };
 }

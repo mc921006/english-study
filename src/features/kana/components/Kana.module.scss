@@ -1,0 +1,348 @@
+@use "../../../styles/tokens" as *;
+
+.study {
+  display: grid;
+  gap: $space-4;
+}
+
+.tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(8rem, 1fr));
+  gap: $space-2;
+  width: min(100%, 24rem);
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $space-2;
+  background: var(--color-surface);
+}
+
+.tab,
+.tabActive {
+  display: grid;
+  min-height: 3.25rem;
+  align-content: center;
+  gap: $space-1;
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  padding: $space-2 $space-3;
+  color: var(--color-muted);
+  background: transparent;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tab small,
+.tabActive small {
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.tab:hover {
+  color: var(--color-accent);
+}
+
+.tabActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.panel {
+  display: grid;
+  gap: $space-5;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $space-5;
+  background: var(--color-surface);
+}
+
+.panelHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 20rem);
+  gap: $space-4;
+  align-items: end;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: $space-4;
+}
+
+.panelHeader h2 {
+  margin: $space-1 0 0;
+  color: var(--color-foreground);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.panelHeader p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.kicker {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: $space-3;
+}
+
+.card {
+  display: grid;
+  width: 100%;
+  min-height: 9.25rem;
+  align-content: center;
+  justify-items: center;
+  gap: $space-2;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: $space-4;
+  background:
+    linear-gradient(180deg, var(--color-surface), var(--color-surface-muted));
+  color: var(--color-foreground);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--color-accent);
+}
+
+.card:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  outline: none;
+}
+
+.kana {
+  color: var(--color-foreground);
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.romanization {
+  color: var(--color-accent);
+  font-size: 1.08rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.detail {
+  display: grid;
+  gap: $space-5;
+}
+
+.detailTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.backButton,
+.secondaryButton {
+  min-height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: 0 $space-4;
+  color: var(--color-foreground);
+  background: var(--color-surface);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.backButton:hover,
+.secondaryButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.1fr);
+  gap: $space-4;
+  align-items: stretch;
+}
+
+.detailHero,
+.examplePanel,
+.writingSection {
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-surface-muted);
+}
+
+.detailHero {
+  display: grid;
+  min-height: 20rem;
+  align-content: center;
+  justify-items: center;
+  gap: $space-4;
+  padding: $space-6;
+}
+
+.detailKana {
+  color: var(--color-foreground);
+  font-size: clamp(7rem, 20vw, 11rem);
+  font-weight: 900;
+  line-height: 0.9;
+}
+
+.detailRomanization {
+  color: var(--color-accent);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.pronunciationPanel {
+  display: flex;
+  justify-content: center;
+}
+
+.audioButton {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  padding: 0 $space-4;
+  color: var(--color-foreground);
+  background: var(--color-surface);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.audioButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.audioButton:disabled {
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.examplePanel {
+  display: grid;
+  align-content: center;
+  gap: $space-3;
+  padding: $space-6;
+}
+
+.exampleWord {
+  margin: 0;
+  color: var(--color-foreground);
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.exampleReading {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.exampleMeaning {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.writingSection {
+  display: grid;
+  gap: $space-4;
+  padding: $space-5;
+}
+
+.writingHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.writingHeader h3 {
+  margin: 0;
+  color: var(--color-foreground);
+  font-size: 1.05rem;
+  letter-spacing: 0;
+}
+
+.writingActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.writingCanvas {
+  width: 100%;
+  height: min(54vh, 24rem);
+  min-height: 18rem;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    width: 100%;
+  }
+
+  .panel {
+    padding: $space-4;
+  }
+
+  .panelHeader {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-2;
+  }
+
+  .card {
+    min-height: 8.25rem;
+    padding: $space-3;
+  }
+
+  .kana {
+    font-size: 2.55rem;
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .detailHero {
+    min-height: 16rem;
+  }
+
+  .examplePanel,
+  .writingSection {
+    padding: $space-4;
+  }
+
+  .writingCanvas {
+    height: 20rem;
+    min-height: 16rem;
+  }
+}

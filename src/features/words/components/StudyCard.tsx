@@ -262,6 +262,8 @@ function renderCard({
   word,
 }: RenderCardParams) {
   const partOfSpeech = getPartOfSpeechDisplay(word.part_of_speech);
+  const frontPrimaryText = getFrontPrimaryText(word);
+  const frontSecondaryText = getFrontSecondaryText(word);
   const cardClassName = [
     isFlipped ? styles.cardFlipped : styles.card,
     isResetting ? styles.cardResetting : "",
@@ -294,9 +296,9 @@ function renderCard({
           <span className={styles.audioButton}>🔊</span>
         )}
         <span className={styles.frontContent}>
-          <span className={styles.word}>{word.word}</span>
+          <span className={styles.word}>{frontPrimaryText}</span>
           <span className={styles.pronunciation}>
-            {`[ ${word.pronunciation} ]`}
+            {`[ ${frontSecondaryText} ]`}
           </span>
         </span>
       </span>
@@ -309,6 +311,14 @@ function renderCard({
       </span>
     </span>
   );
+}
+
+function getFrontPrimaryText(word: Word) {
+  return word.language === "ja" ? word.pronunciation : word.word;
+}
+
+function getFrontSecondaryText(word: Word) {
+  return word.language === "ja" ? word.word : word.pronunciation;
 }
 
 function getCardMotionClassName(
@@ -364,6 +374,28 @@ const partOfSpeechLabels: Record<string, string> = {
   "auxiliary verb": "조동사",
   "modal verb": "법조동사",
   "phrasal verb": "구동사",
+  명사: "명사",
+  대명사: "대명사",
+  동사: "동사",
+  형용사: "형용사",
+  형용동사: "형용동사",
+  부사: "부사",
+  전치사: "전치사",
+  접속사: "접속사",
+  감탄사: "감탄사",
+  관사: "관사",
+  한정사: "한정사",
+  조동사: "조동사",
+  名詞: "명사",
+  動詞: "동사",
+  形容詞: "형용사",
+  副詞: "부사",
+  代名詞: "대명사",
+  接続詞: "접속사",
+  感動詞: "감탄사",
+  疑問詞: "의문사",
+  조사: "조사",
+  의문사: "의문사",
 };
 
 const partOfSpeechClassNames: Record<string, string> = {
@@ -380,6 +412,28 @@ const partOfSpeechClassNames: Record<string, string> = {
   "auxiliary verb": styles.posAuxiliaryVerb,
   "modal verb": styles.posModalVerb,
   "phrasal verb": styles.posPhrasalVerb,
+  명사: styles.posNoun,
+  대명사: styles.posPronoun,
+  동사: styles.posVerb,
+  형용사: styles.posAdjective,
+  형용동사: styles.posAdjective,
+  부사: styles.posAdverb,
+  전치사: styles.posPreposition,
+  접속사: styles.posConjunction,
+  감탄사: styles.posInterjection,
+  관사: styles.posArticle,
+  한정사: styles.posDeterminer,
+  조동사: styles.posAuxiliaryVerb,
+  名詞: styles.posNoun,
+  動詞: styles.posVerb,
+  形容詞: styles.posAdjective,
+  副詞: styles.posAdverb,
+  代名詞: styles.posPronoun,
+  接続詞: styles.posConjunction,
+  感動詞: styles.posInterjection,
+  疑問詞: styles.posDefault,
+  조사: styles.posDefault,
+  의문사: styles.posDefault,
 };
 
 function highlightWordInExample(example: string, word: string) {

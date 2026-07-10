@@ -2,7 +2,7 @@ import { commonWordLevel, type WordStudyLevel } from "@/types/word";
 import styles from "./WordStudy.module.scss";
 
 type DailyStudyProgressProps = {
-  cefrLevel: WordStudyLevel;
+  level: WordStudyLevel;
   current: number;
   total: number;
   progressPercent: number;
@@ -10,7 +10,7 @@ type DailyStudyProgressProps = {
 };
 
 export function DailyStudyProgress({
-  cefrLevel,
+  level,
   current,
   total,
   progressPercent,
@@ -19,7 +19,7 @@ export function DailyStudyProgress({
   return (
     <header className={styles.studyHeader}>
       <div>
-        <span className={styles.kicker}>{getStudyLevelLabel(cefrLevel)}</span>
+        <span className={styles.kicker}>{getStudyLevelLabel(level)}</span>
         <h2>Today&apos;s Study</h2>
       </div>
       <div className={styles.studyHeaderActions}>

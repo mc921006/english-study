@@ -9,7 +9,11 @@ import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-type WordLanguage = "en" | "vi";
+type JlptLevel = "N5" | "N4" | "N3" | "N2" | "N1";
+type WordLanguage = "en" | "vi" | "ja";
+type SeedableLanguage = "en" | "ja";
+type SeedLevel = CefrLevel | JlptLevel;
+type WordLevel = SeedLevel | "common";
 
 type SeedWord = {
   word: string;
@@ -18,8 +22,18 @@ type SeedWord = {
   example_meaning: string;
   pronunciation: string;
   part_of_speech: string;
-  cefr_level: CefrLevel;
+  level: WordLevel;
   language: WordLanguage;
+};
+
+type EnglishSeedWord = SeedWord & {
+  level: CefrLevel;
+  language: "en";
+};
+
+type JapaneseSeedWord = SeedWord & {
+  level: JlptLevel;
+  language: "ja";
 };
 
 type ChatCompletionResponse = {
@@ -37,16 +51,17 @@ type ChatCompletionErrorResponse = {
 };
 
 type PronunciationRepairItem = Pick<
-  SeedWord,
-  "word" | "meaning" | "part_of_speech" | "cefr_level" | "pronunciation"
+  EnglishSeedWord,
+  "word" | "meaning" | "part_of_speech" | "level" | "pronunciation"
 >;
 
-type PronunciationRepairResult = Pick<SeedWord, "word" | "cefr_level"> & {
+type PronunciationRepairResult = Pick<EnglishSeedWord, "word" | "level"> & {
   pronunciation: string;
 };
 
 type SeedProgress = {
-  cefrLevel: CefrLevel;
+  language: SeedableLanguage;
+  level: SeedLevel;
   targetCount: number;
   insertedCount: number;
   skippedCount: number;
@@ -76,7 +91,8 @@ type WordsSupabaseClient = SupabaseClient<SeedDatabase>;
 
 type SeedCommand = {
   mode: "seed";
-  cefrLevel: CefrLevel;
+  language: SeedableLanguage;
+  level: SeedLevel;
   count: number;
   batchSize: number;
   maxRetries: number;
@@ -89,6 +105,7 @@ type RepairPronunciationCommand = {
 };
 
 const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
 const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 const OPENAI_DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_BATCH_SIZE = 50;
@@ -96,7 +113,9 @@ const DEFAULT_REPAIR_BATCH_SIZE = 50;
 const DEFAULT_MAX_RETRIES = 3;
 const EXCLUSION_PROMPT_LIMIT = 250;
 const PROGRESS_DIR = resolve(process.cwd(), ".seed-progress");
-const DEFAULT_WORD_LANGUAGE: WordLanguage = "en";
+const DEFAULT_WORD_LANGUAGE = "en";
+const JAPANESE_WORD_LANGUAGE = "ja";
+const SUPPORTED_JAPANESE_SEED_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
 const HANGUL_PATTERN = /[\u3131-\u318e\uac00-\ud7a3]/;
 
 main().catch((error) => {
@@ -134,13 +153,22 @@ async function main() {
     return;
   }
 
-  const { cefrLevel, count, batchSize, maxRetries } = command;
-  const existingWordSet = await fetchExistingWordSet(supabase, cefrLevel);
-  const progress = loadOrCreateProgress({ cefrLevel, count, batchSize });
+  const { count, batchSize, maxRetries } = command;
+  const existingWordSet = await fetchExistingWordSet(
+    supabase,
+    command.language,
+    command.level,
+  );
+  const progress = loadOrCreateProgress({
+    language: command.language,
+    level: command.level,
+    count,
+    batchSize,
+  });
 
   console.log(
     [
-      `Seeding ${count} ${cefrLevel} words with ${aiClient.model}`,
+      `Seeding ${count} ${command.language} ${command.level} words with ${aiClient.model}`,
       `batch=${batchSize}`,
       `retries=${maxRetries}`,
       `existing=${existingWordSet.size}`,
@@ -148,18 +176,32 @@ async function main() {
     ].join(" | "),
   );
 
-  const result = await seedWordsInBatches({
-    supabase,
-    cefrLevel,
-    count,
-    batchSize,
-    maxRetries,
-    aiClient,
-    excludedWords: existingWordSet,
-    progress,
-  });
+  const result =
+    command.language === "ja"
+      ? await seedJapaneseWordsInBatches({
+          supabase,
+          jlptLevel: command.level as JlptLevel,
+          count,
+          batchSize,
+          maxRetries,
+          aiClient,
+          excludedWords: existingWordSet,
+          progress,
+        })
+      : await seedWordsInBatches({
+          supabase,
+          cefrLevel: command.level as CefrLevel,
+          count,
+          batchSize,
+          maxRetries,
+          aiClient,
+          excludedWords: existingWordSet,
+          progress,
+        });
 
-  clearProgress(cefrLevel, count);
+  if (result.insertedCount >= count) {
+    clearProgress(command.language, command.level, count);
+  }
 
   console.log(
     `Done. Inserted ${result.insertedCount} words. Skipped ${result.skippedCount} duplicates.`,
@@ -167,13 +209,13 @@ async function main() {
 }
 
 function parseArgs(args: string[]): SeedCommand | RepairPronunciationCommand {
-  const [cefrLevelArg, countArg] = args;
+  const [firstArg, secondArg, thirdArg] = args;
   const batchSize = parsePositiveIntEnv("SEED_WORDS_BATCH_SIZE", DEFAULT_BATCH_SIZE);
   const maxRetries = parsePositiveIntEnv("SEED_WORDS_MAX_RETRIES", DEFAULT_MAX_RETRIES);
 
   if (
-    cefrLevelArg === "repair-pronunciations" ||
-    cefrLevelArg === "--repair-pronunciations"
+    firstArg === "repair-pronunciations" ||
+    firstArg === "--repair-pronunciations"
   ) {
     return {
       mode: "repairPronunciations",
@@ -185,26 +227,81 @@ function parseArgs(args: string[]): SeedCommand | RepairPronunciationCommand {
     };
   }
 
-  if (!isCefrLevel(cefrLevelArg)) {
+  if (firstArg === "ja") {
+    if (!isJlptLevel(secondArg)) {
+      throw new Error(
+        [
+          `Usage: pnpm seed:words ja <${SUPPORTED_JAPANESE_SEED_LEVELS.join("|")}> <count>`,
+          "Example: pnpm seed:words ja N4 100",
+        ].join("\n"),
+      );
+    }
+
+    if (!isSupportedJapaneseSeedLevel(secondArg)) {
+      throw new Error(
+        `Japanese level must be one of ${SUPPORTED_JAPANESE_SEED_LEVELS.join(", ")}.`,
+      );
+    }
+
+    const count = parseCount(thirdArg);
+
+    return {
+      mode: "seed",
+      language: "ja",
+      level: secondArg,
+      count,
+      batchSize,
+      maxRetries,
+    };
+  }
+
+  if (!isCefrLevel(firstArg)) {
     throw new Error(
       [
         `Usage: pnpm seed:words <${CEFR_LEVELS.join("|")}> <count>`,
         "Example: pnpm seed:words A1 100",
+        `Japanese: pnpm seed:words ja <${SUPPORTED_JAPANESE_SEED_LEVELS.join("|")}> <count>`,
+        "Japanese example: pnpm seed:words ja N5 100",
         "Repair pronunciations: pnpm seed:words repair-pronunciations",
       ].join("\n"),
     );
   }
 
-  const count = Number(countArg);
-  if (!Number.isInteger(count) || count < 1) {
-    throw new Error("count must be a positive integer.");
-  }
+  const count = parseCount(secondArg);
 
-  return { mode: "seed", cefrLevel: cefrLevelArg, count, batchSize, maxRetries };
+  return {
+    mode: "seed",
+    language: "en",
+    level: firstArg,
+    count,
+    batchSize,
+    maxRetries,
+  };
 }
 
 function isCefrLevel(value: string | undefined): value is CefrLevel {
   return CEFR_LEVELS.includes(value as CefrLevel);
+}
+
+function isJlptLevel(value: string | undefined): value is JlptLevel {
+  return JLPT_LEVELS.includes(value as JlptLevel);
+}
+
+function isSupportedJapaneseSeedLevel(
+  value: JlptLevel,
+): value is (typeof SUPPORTED_JAPANESE_SEED_LEVELS)[number] {
+  return SUPPORTED_JAPANESE_SEED_LEVELS.includes(
+    value as (typeof SUPPORTED_JAPANESE_SEED_LEVELS)[number],
+  );
+}
+
+function parseCount(value: string | undefined) {
+  const count = Number(value);
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error("count must be a positive integer.");
+  }
+
+  return count;
 }
 
 function getRequiredEnv(name: string) {
@@ -258,6 +355,18 @@ function getAIClient() {
   );
 }
 
+function shouldRequireOpenRouterParameters(aiClient: ReturnType<typeof getAIClient>) {
+  return (
+    aiClient.usesOpenRouter &&
+    !aiClient.model.endsWith(":free") &&
+    aiClient.model !== "openrouter/free"
+  );
+}
+
+function shouldUseStructuredResponseFormat(aiClient: ReturnType<typeof getAIClient>) {
+  return !aiClient.usesOpenRouter || shouldRequireOpenRouterParameters(aiClient);
+}
+
 function loadEnvLocal() {
   const envPath = resolve(process.cwd(), ".env.local");
   if (!existsSync(envPath)) {
@@ -309,7 +418,7 @@ async function generateWords({
   count: number;
   aiClient: ReturnType<typeof getAIClient>;
   excludedWords: Iterable<string>;
-}) {
+}): Promise<EnglishSeedWord[]> {
   const exclusions = Array.from(excludedWords).slice(-EXCLUSION_PROMPT_LIMIT);
   const requestBody = {
     model: aiClient.model,
@@ -337,7 +446,7 @@ async function generateWords({
           "pronunciation must never contain Korean Hangul, Korean-style transliteration, or Korean letters.",
           "Good pronunciation examples: /ˈæp.əl/, /ˈtiː.tʃər/, /rʌn/.",
           "Bad pronunciation examples: 애플, 티처, 런.",
-          `Every item must use cefr_level "${cefrLevel}".`,
+          `Every item must use level "${cefrLevel}".`,
           "Return JSON only.",
         ].join(" "),
       },
@@ -365,7 +474,7 @@ async function generateWords({
                   example_meaning: { type: "string" },
                   pronunciation: { type: "string" },
                   part_of_speech: { type: "string" },
-                  cefr_level: { type: "string", enum: [cefrLevel] },
+                  level: { type: "string", enum: [cefrLevel] },
                 },
                 required: [
                   "word",
@@ -374,7 +483,7 @@ async function generateWords({
                   "example_meaning",
                   "pronunciation",
                   "part_of_speech",
-                  "cefr_level",
+                  "level",
                 ],
               },
             },
@@ -383,7 +492,7 @@ async function generateWords({
         },
       },
     },
-    ...(aiClient.usesOpenRouter
+    ...(shouldRequireOpenRouterParameters(aiClient)
       ? {
           provider: {
             require_parameters: true,
@@ -442,7 +551,7 @@ async function generateNewWords({
   aiClient: ReturnType<typeof getAIClient>;
   excludedWords: Set<string>;
 }) {
-  const wordsToInsert: SeedWord[] = [];
+  const wordsToInsert: EnglishSeedWord[] = [];
   let attempts = 0;
 
   while (wordsToInsert.length < count && attempts < 5) {
@@ -454,7 +563,7 @@ async function generateNewWords({
       aiClient,
       excludedWords,
     });
-    const uniqueGeneratedWords = dedupeWords(generatedWords, cefrLevel);
+    const uniqueGeneratedWords = dedupeEnglishWords(generatedWords, cefrLevel);
     const newWords = uniqueGeneratedWords.filter(({ word }) => {
       const normalizedWord = normalizeWord(word);
       if (excludedWords.has(normalizedWord)) {
@@ -469,6 +578,192 @@ async function generateNewWords({
 
     if (newWords.length === 0) {
       break;
+    }
+  }
+
+  return wordsToInsert;
+}
+
+async function generateJapaneseWords({
+  jlptLevel,
+  count,
+  aiClient,
+  excludedWords,
+}: {
+  jlptLevel: JlptLevel;
+  count: number;
+  aiClient: ReturnType<typeof getAIClient>;
+  excludedWords: Iterable<string>;
+}): Promise<JapaneseSeedWord[]> {
+  const exclusions = Array.from(excludedWords).slice(-EXCLUSION_PROMPT_LIMIT);
+  const requestBody = {
+    model: aiClient.model,
+    max_tokens: getMaxTokens(count),
+    messages: [
+      {
+        role: "system",
+        content:
+          "You create high-quality Japanese vocabulary seed data for Korean learners. Return JSON only. Do not include markdown, comments, prose, or explanations.",
+      },
+      {
+        role: "user",
+        content: [
+          `Generate exactly ${count} unique Japanese vocabulary words for JLPT ${jlptLevel}.`,
+          `Only include words appropriate for JLPT ${jlptLevel}.`,
+          exclusions.length > 0
+            ? `Do not return any of these already-used Japanese words: ${exclusions.join(", ")}. If a candidate appears in this list, choose a different JLPT ${jlptLevel} word.`
+            : "",
+          `Use common words that JLPT ${jlptLevel} learners actually study.`,
+          `Use a broad range of JLPT ${jlptLevel} categories: verbs, nouns, adjectives, adverbs, expressions, daily life, school, work, travel, society, emotions, and abstract concepts appropriate for the level.`,
+          `If the most common JLPT ${jlptLevel} words are already excluded, choose other valid JLPT ${jlptLevel} words instead of repeating excluded words.`,
+          "word must be written in Japanese using kanji/kana as natural for the level.",
+          "meaning must be natural Korean.",
+          "example must be a short natural Japanese sentence at beginner level.",
+          "example_meaning must be a natural Korean translation of the example.",
+          "pronunciation must be the hiragana reading of word.",
+          "part_of_speech must be included.",
+          `Every item must use language "${JAPANESE_WORD_LANGUAGE}".`,
+          `Every item must use level "${jlptLevel}".`,
+          "Return JSON only.",
+        ].join(" "),
+      },
+    ],
+    ...(shouldUseStructuredResponseFormat(aiClient)
+      ? {
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "japanese_word_seed_data",
+              strict: true,
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  words: {
+                    type: "array",
+                    minItems: count,
+                    maxItems: count,
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      properties: {
+                        word: { type: "string" },
+                        meaning: { type: "string" },
+                        example: { type: "string" },
+                        example_meaning: { type: "string" },
+                        pronunciation: { type: "string" },
+                        part_of_speech: { type: "string" },
+                        language: {
+                          type: "string",
+                          enum: [JAPANESE_WORD_LANGUAGE],
+                        },
+                        level: { type: "string", enum: [jlptLevel] },
+                      },
+                      required: [
+                        "word",
+                        "meaning",
+                        "example",
+                        "example_meaning",
+                        "pronunciation",
+                        "part_of_speech",
+                        "language",
+                        "level",
+                      ],
+                    },
+                  },
+                },
+                required: ["words"],
+              },
+            },
+          },
+        }
+      : {}),
+    ...(shouldRequireOpenRouterParameters(aiClient)
+      ? {
+          provider: {
+            require_parameters: true,
+          },
+        }
+      : {}),
+  };
+
+  const response = await fetch(aiClient.endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${aiClient.apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://localhost",
+      "X-Title": "english-study seed japanese words",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const responseBody = (await response.json()) as
+    | ChatCompletionResponse
+    | ChatCompletionErrorResponse;
+  if (!response.ok) {
+    const message =
+      "error" in responseBody && responseBody.error?.message
+        ? responseBody.error.message
+        : response.statusText;
+    throw new Error(`${aiClient.providerName} request failed: ${message}`);
+  }
+
+  const chatCompletionResponse = responseBody as ChatCompletionResponse;
+  const parsed = parseAIJson(chatCompletionResponse);
+  if (!Array.isArray(parsed.words)) {
+    throw new Error(
+      `${aiClient.providerName} response did not include a words array.`,
+    );
+  }
+
+  if (parsed.words.length !== count) {
+    throw new Error(
+      `${aiClient.providerName} returned ${parsed.words.length} words, but ${count} were requested.`,
+    );
+  }
+
+  return parsed.words.map((word) => normalizeJapaneseSeedWord(word, jlptLevel));
+}
+
+async function generateNewJapaneseWords({
+  jlptLevel,
+  count,
+  aiClient,
+  excludedWords,
+}: {
+  jlptLevel: JlptLevel;
+  count: number;
+  aiClient: ReturnType<typeof getAIClient>;
+  excludedWords: Set<string>;
+}) {
+  const wordsToInsert: JapaneseSeedWord[] = [];
+  let attempts = 0;
+
+  while (wordsToInsert.length < count && attempts < 5) {
+    attempts += 1;
+    const remainingCount = count - wordsToInsert.length;
+    const generatedWords = await generateJapaneseWords({
+      jlptLevel,
+      count: remainingCount,
+      aiClient,
+      excludedWords,
+    });
+    const uniqueGeneratedWords = dedupeJapaneseWords(generatedWords, jlptLevel);
+    const newWords = uniqueGeneratedWords.filter(({ word }) => {
+      const normalizedWord = normalizeWord(word);
+      if (excludedWords.has(normalizedWord)) {
+        return false;
+      }
+
+      excludedWords.add(normalizedWord);
+      return true;
+    });
+
+    wordsToInsert.push(...newWords);
+
+    if (newWords.length === 0) {
+      continue;
     }
   }
 
@@ -538,6 +833,78 @@ async function seedWordsInBatches({
 
     console.log(
       `Batch ${batchNumber}: inserted=${insertedWords.length}, skipped=${currentBatchSize - insertedWords.length}, progress=${progress.insertedCount}/${count}`,
+    );
+  }
+
+  return {
+    insertedCount: progress.insertedCount,
+    skippedCount: progress.skippedCount,
+  };
+}
+
+async function seedJapaneseWordsInBatches({
+  supabase,
+  jlptLevel,
+  count,
+  batchSize,
+  maxRetries,
+  aiClient,
+  excludedWords,
+  progress,
+}: {
+  supabase: WordsSupabaseClient;
+  jlptLevel: JlptLevel;
+  count: number;
+  batchSize: number;
+  maxRetries: number;
+  aiClient: ReturnType<typeof getAIClient>;
+  excludedWords: Set<string>;
+  progress: SeedProgress;
+}) {
+  while (progress.insertedCount < count) {
+    const remainingCount = count - progress.insertedCount;
+    const currentBatchSize = Math.min(batchSize, remainingCount);
+    const batchNumber = Math.floor(progress.insertedCount / batchSize) + 1;
+    const totalBatches = Math.ceil(count / batchSize);
+
+    console.log(
+      `[${new Date().toISOString()}] Japanese batch ${batchNumber}/${totalBatches} | target=${currentBatchSize} | inserted=${progress.insertedCount}/${count}`,
+    );
+
+    const wordsToInsert = await withRetries(
+      () =>
+        generateNewJapaneseWords({
+          jlptLevel,
+          count: currentBatchSize,
+          aiClient,
+          excludedWords,
+        }),
+      maxRetries,
+      `generate Japanese ${jlptLevel} batch ${batchNumber}`,
+    );
+
+    if (wordsToInsert.length === 0) {
+      progress.skippedCount += currentBatchSize;
+      saveProgress(progress);
+      console.log(
+        `Japanese batch ${batchNumber}: no new words generated. Progress saved; rerun to continue.`,
+      );
+      break;
+    }
+
+    const insertedWords = await withRetries(
+      () => insertWords(supabase, wordsToInsert),
+      maxRetries,
+      `insert Japanese ${jlptLevel} batch ${batchNumber}`,
+    );
+
+    progress.insertedCount += insertedWords.length;
+    progress.skippedCount += currentBatchSize - insertedWords.length;
+    progress.updatedAt = new Date().toISOString();
+    saveProgress(progress);
+
+    console.log(
+      `Japanese batch ${batchNumber}: inserted=${insertedWords.length}, skipped=${currentBatchSize - insertedWords.length}, progress=${progress.insertedCount}/${count}`,
     );
   }
 
@@ -617,7 +984,7 @@ async function fetchEnglishWordsWithHangulPronunciation(
     const to = from + pageSize - 1;
     const { data, error } = await supabase
       .from("words")
-      .select("word, meaning, part_of_speech, cefr_level, pronunciation")
+      .select("word, meaning, part_of_speech, level, pronunciation")
       .eq("language", DEFAULT_WORD_LANGUAGE)
       .range(from, to);
 
@@ -630,11 +997,16 @@ async function fetchEnglishWordsWithHangulPronunciation(
         continue;
       }
 
+      const cefrLevel = String(row.level);
+      if (!isCefrLevel(cefrLevel)) {
+        continue;
+      }
+
       words.push({
         word: String(row.word),
         meaning: String(row.meaning),
         part_of_speech: String(row.part_of_speech),
-        cefr_level: row.cefr_level,
+        level: cefrLevel,
         pronunciation: String(row.pronunciation),
       });
     }
@@ -648,8 +1020,8 @@ async function fetchEnglishWordsWithHangulPronunciation(
 
   return words.sort((firstWord, secondWord) => {
     const levelComparison =
-      CEFR_LEVELS.indexOf(firstWord.cefr_level) -
-      CEFR_LEVELS.indexOf(secondWord.cefr_level);
+      CEFR_LEVELS.indexOf(firstWord.level) -
+      CEFR_LEVELS.indexOf(secondWord.level);
 
     if (levelComparison !== 0) {
       return levelComparison;
@@ -679,8 +1051,8 @@ async function generatePronunciationRepairs({
         role: "user",
         content: [
           "For each item, regenerate only pronunciation.",
-          "Return the same word and cefr_level exactly as provided.",
-          "Do not change meaning, part_of_speech, cefr_level, or word.",
+          "Return the same word and level exactly as provided.",
+          "Do not change meaning, part_of_speech, level, or word.",
           "pronunciation must be IPA whenever possible.",
           "pronunciation may use standard English dictionary notation only if IPA is not possible.",
           "pronunciation must never contain Korean Hangul, Korean-style transliteration, or Korean letters.",
@@ -689,7 +1061,7 @@ async function generatePronunciationRepairs({
           `Items: ${JSON.stringify(
             words.map((word) => ({
               word: word.word,
-              cefr_level: word.cefr_level,
+              level: word.level,
               meaning: word.meaning,
               part_of_speech: word.part_of_speech,
               current_pronunciation: word.pronunciation,
@@ -717,10 +1089,10 @@ async function generatePronunciationRepairs({
                 additionalProperties: false,
                 properties: {
                   word: { type: "string" },
-                  cefr_level: { type: "string", enum: CEFR_LEVELS },
+                  level: { type: "string", enum: CEFR_LEVELS },
                   pronunciation: { type: "string" },
                 },
-                required: ["word", "cefr_level", "pronunciation"],
+                required: ["word", "level", "pronunciation"],
               },
             },
           },
@@ -728,7 +1100,7 @@ async function generatePronunciationRepairs({
         },
       },
     },
-    ...(aiClient.usesOpenRouter
+    ...(shouldRequireOpenRouterParameters(aiClient)
       ? {
           provider: {
             require_parameters: true,
@@ -791,14 +1163,14 @@ function normalizePronunciationRepairs(
     }
 
     const item = repair as Record<string, unknown>;
-    const cefrLevel = requiredString(item.cefr_level, "cefr_level");
+    const cefrLevel = requiredString(item.level, "level");
     if (!isCefrLevel(cefrLevel)) {
-      throw new Error("AI returned an invalid cefr_level.");
+      throw new Error("AI returned an invalid level.");
     }
 
     const normalizedRepair = {
       word: requiredString(item.word, "word"),
-      cefr_level: cefrLevel,
+      level: cefrLevel,
       pronunciation: requiredString(item.pronunciation, "pronunciation"),
     };
     assertEnglishPronunciation(normalizedRepair.pronunciation);
@@ -845,19 +1217,19 @@ async function updatePronunciations(
       .from("words")
       .update({ pronunciation: repair.pronunciation })
       .eq("language", DEFAULT_WORD_LANGUAGE)
-      .eq("cefr_level", repair.cefr_level)
+      .eq("level", repair.level)
       .eq("word", repair.word)
       .select("word");
 
     if (error) {
       throw new Error(
-        `Failed to update pronunciation for ${repair.cefr_level}:${repair.word}: ${error.message}`,
+        `Failed to update pronunciation for ${repair.level}:${repair.word}: ${error.message}`,
       );
     }
 
     if (!data || data.length === 0) {
       throw new Error(
-        `No word row was updated for ${repair.cefr_level}:${repair.word}.`,
+        `No word row was updated for ${repair.level}:${repair.word}.`,
       );
     }
 
@@ -868,9 +1240,9 @@ async function updatePronunciations(
 }
 
 function getPronunciationRepairKey(
-  word: Pick<SeedWord, "word" | "cefr_level">,
+  word: Pick<EnglishSeedWord, "word" | "level">,
 ) {
-  return `${word.cefr_level}:${normalizeWord(word.word)}`;
+  return `${word.level}:${normalizeWord(word.word)}`;
 }
 
 async function insertWords(
@@ -878,7 +1250,9 @@ async function insertWords(
   words: SeedWord[],
 ) {
   for (const word of words) {
-    assertEnglishPronunciation(word.pronunciation);
+    if (word.language === DEFAULT_WORD_LANGUAGE) {
+      assertEnglishPronunciation(word.pronunciation);
+    }
   }
 
   const { data, error } = await supabase.from("words").insert(words).select("word");
@@ -920,7 +1294,8 @@ async function withRetries<T>(
 
 async function fetchExistingWordSet(
   supabase: WordsSupabaseClient,
-  cefrLevel: CefrLevel,
+  language: SeedableLanguage,
+  level: SeedLevel,
 ) {
   const words = new Set<string>();
   const pageSize = 1000;
@@ -928,12 +1303,16 @@ async function fetchExistingWordSet(
 
   while (true) {
     const to = from + pageSize - 1;
-    const { data, error } = await supabase
+    let query = supabase
       .from("words")
       .select("word")
-      .eq("cefr_level", cefrLevel)
-      .eq("language", DEFAULT_WORD_LANGUAGE)
-      .range(from, to);
+      .eq("language", language);
+
+    if (language !== JAPANESE_WORD_LANGUAGE) {
+      query = query.eq("level", level);
+    }
+
+    const { data, error } = await query.range(from, to);
 
     if (error) {
       throw new Error(`Failed to fetch existing words: ${error.message}`);
@@ -954,30 +1333,36 @@ async function fetchExistingWordSet(
 }
 
 function loadOrCreateProgress({
-  cefrLevel,
+  language,
+  level,
   count,
   batchSize,
 }: {
-  cefrLevel: CefrLevel;
+  language: SeedableLanguage;
+  level: SeedLevel;
   count: number;
   batchSize: number;
 }) {
-  const progressPath = getProgressPath(cefrLevel, count);
+  const progressPath = getProgressPath(language, level, count);
   if (existsSync(progressPath)) {
     const progress = JSON.parse(readFileSync(progressPath, "utf8")) as SeedProgress;
 
     if (
-      progress.cefrLevel === cefrLevel &&
-      progress.targetCount === count &&
-      progress.batchSize === batchSize
+      progress.language === language &&
+      progress.level === level &&
+      progress.targetCount === count
     ) {
-      return progress;
+      return {
+        ...progress,
+        batchSize,
+      };
     }
   }
 
   const now = new Date().toISOString();
   return {
-    cefrLevel,
+    language,
+    level,
     targetCount: count,
     insertedCount: 0,
     skippedCount: 0,
@@ -990,20 +1375,20 @@ function loadOrCreateProgress({
 function saveProgress(progress: SeedProgress) {
   mkdirSync(PROGRESS_DIR, { recursive: true });
   writeFileSync(
-    getProgressPath(progress.cefrLevel, progress.targetCount),
+    getProgressPath(progress.language, progress.level, progress.targetCount),
     `${JSON.stringify(progress, null, 2)}\n`,
   );
 }
 
-function clearProgress(cefrLevel: CefrLevel, count: number) {
-  const progressPath = getProgressPath(cefrLevel, count);
+function clearProgress(language: SeedableLanguage, level: SeedLevel, count: number) {
+  const progressPath = getProgressPath(language, level, count);
   if (existsSync(progressPath)) {
     rmSync(progressPath);
   }
 }
 
-function getProgressPath(cefrLevel: CefrLevel, count: number) {
-  return resolve(PROGRESS_DIR, `${cefrLevel}-${count}.json`);
+function getProgressPath(language: SeedableLanguage, level: SeedLevel, count: number) {
+  return resolve(PROGRESS_DIR, `${language}-${level}-${count}.json`);
 }
 
 function sleep(ms: number) {
@@ -1017,7 +1402,7 @@ function getErrorMessage(error: unknown) {
 }
 
 function getMaxTokens(count: number) {
-  return Math.min(12_000, Math.max(1_000, count * 180 + 500));
+  return Math.min(12_000, Math.max(500, count * 180 + 320));
 }
 
 function getPronunciationRepairMaxTokens(count: number) {
@@ -1038,25 +1423,56 @@ function parseAIJsonObject(body: ChatCompletionResponse) {
   return JSON.parse(outputText) as Record<string, unknown>;
 }
 
-function normalizeSeedWord(word: unknown, cefrLevel: CefrLevel): SeedWord {
+function normalizeSeedWord(word: unknown, cefrLevel: CefrLevel): EnglishSeedWord {
   if (!word || typeof word !== "object") {
     throw new Error("AI returned an invalid word item.");
   }
 
   const item = word as Record<string, unknown>;
-  const normalized = {
+  const normalized: EnglishSeedWord = {
     word: requiredString(item.word, "word"),
     meaning: requiredString(item.meaning, "meaning"),
     example: requiredString(item.example, "example"),
     example_meaning: requiredString(item.example_meaning, "example_meaning"),
     pronunciation: requiredString(item.pronunciation, "pronunciation"),
     part_of_speech: requiredString(item.part_of_speech, "part_of_speech"),
-    cefr_level: cefrLevel,
+    level: cefrLevel,
     language: DEFAULT_WORD_LANGUAGE,
   };
   assertEnglishPronunciation(normalized.pronunciation);
 
   return normalized;
+}
+
+function normalizeJapaneseSeedWord(
+  word: unknown,
+  jlptLevel: JlptLevel,
+): JapaneseSeedWord {
+  if (!word || typeof word !== "object") {
+    throw new Error("AI returned an invalid Japanese word item.");
+  }
+
+  const item = word as Record<string, unknown>;
+  const language = requiredString(item.language, "language");
+  if (language !== JAPANESE_WORD_LANGUAGE) {
+    throw new Error(`AI returned an invalid Japanese language: ${language}.`);
+  }
+
+  const responseJlptLevel = requiredString(item.level, "level");
+  if (responseJlptLevel !== jlptLevel) {
+    throw new Error(`AI returned an invalid level: ${responseJlptLevel}.`);
+  }
+
+  return {
+    word: requiredString(item.word, "word"),
+    meaning: requiredString(item.meaning, "meaning"),
+    example: requiredString(item.example, "example"),
+    example_meaning: requiredString(item.example_meaning, "example_meaning"),
+    pronunciation: requiredString(item.pronunciation, "pronunciation"),
+    part_of_speech: requiredString(item.part_of_speech, "part_of_speech"),
+    level: jlptLevel,
+    language: JAPANESE_WORD_LANGUAGE,
+  };
 }
 
 function requiredString(value: unknown, fieldName: string) {
@@ -1067,11 +1483,29 @@ function requiredString(value: unknown, fieldName: string) {
   return value.trim();
 }
 
-function dedupeWords(words: SeedWord[], cefrLevel: CefrLevel) {
+function dedupeEnglishWords(words: EnglishSeedWord[], cefrLevel: CefrLevel) {
   const seen = new Set<string>();
 
   return words.filter((word) => {
-    if (word.cefr_level !== cefrLevel) {
+    if (word.level !== cefrLevel) {
+      return false;
+    }
+
+    const key = normalizeWord(word.word);
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function dedupeJapaneseWords(words: JapaneseSeedWord[], jlptLevel: JlptLevel) {
+  const seen = new Set<string>();
+
+  return words.filter((word) => {
+    if (word.level !== jlptLevel || word.language !== JAPANESE_WORD_LANGUAGE) {
       return false;
     }
 

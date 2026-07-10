@@ -30,20 +30,20 @@ export function useDailyStudy({ language }: UseDailyStudyParams) {
   const visibleStatus = study?.language === language ? status : "setup";
 
   const startStudy = useCallback(
-    async (cefrLevel: WordStudyLevel, dailyCount: DailyStudyCount) => {
+    async (level: WordStudyLevel, dailyCount: DailyStudyCount) => {
       setStatus("loading");
       setErrorMessage(null);
 
       try {
         const words = await getWords({
-          cefrLevel,
+          level,
           language,
           limit: dailyCount,
         });
         const nextStudy: DailyStudy = {
           date: getTodayKey(),
           language,
-          cefrLevel,
+          level,
           dailyCount,
           words,
           currentIndex: 0,
@@ -72,7 +72,7 @@ export function useDailyStudy({ language }: UseDailyStudyParams) {
       return;
     }
 
-    await startStudy(visibleStudy.cefrLevel, visibleStudy.dailyCount);
+    await startStudy(visibleStudy.level, visibleStudy.dailyCount);
   }, [startStudy, visibleStudy]);
 
   const returnToSetup = useCallback(() => {
@@ -186,5 +186,9 @@ function getEmptyWordsMessage(language: WordLanguage) {
     return "베트남어 단어 데이터가 아직 없습니다.";
   }
 
-  return "No words found for this CEFR level.";
+  if (language === "ja") {
+    return "일본어 N5 단어 데이터가 아직 없습니다.";
+  }
+
+  return "No words found for this level.";
 }

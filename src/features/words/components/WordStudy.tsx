@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useStudyLanguage } from "@/features/language/context/LanguageProvider";
+import type { WordLanguage } from "@/types/word";
 import { DailyStudyProgress } from "./DailyStudyProgress";
 import { DailyStudySetup } from "./DailyStudySetup";
 import { QuizResults } from "./QuizResults";
@@ -14,6 +15,23 @@ import styles from "./WordStudy.module.scss";
 
 export function WordStudy() {
   const { language } = useStudyLanguage();
+
+  if (!language.wordLanguage) {
+    return (
+      <div className={styles.empty}>
+        <p>Word study is not available for {language.englishLabel} yet.</p>
+      </div>
+    );
+  }
+
+  return <WordStudyContent wordLanguage={language.wordLanguage} />;
+}
+
+type WordStudyContentProps = Readonly<{
+  wordLanguage: WordLanguage;
+}>;
+
+function WordStudyContent({ wordLanguage }: WordStudyContentProps) {
   const [quizMode, setQuizMode] = useState<WordQuizMode>("meaning");
   const {
     status,
@@ -30,8 +48,8 @@ export function WordStudy() {
     showQuizResults,
     moveToPrevious,
     moveToNext,
-  } = useDailyStudy({ language: language.wordLanguage });
-  const quiz = useWordQuiz(study?.words ?? [], language.wordLanguage);
+  } = useDailyStudy({ language: wordLanguage });
+  const quiz = useWordQuiz(study?.words ?? [], wordLanguage);
 
   const startQuiz = async () => {
     const isQuizReady = await quiz.startQuiz(quizMode);
@@ -54,7 +72,7 @@ export function WordStudy() {
       <DailyStudySetup
         errorMessage={errorMessage}
         isLoading={status === "loading"}
-        wordLanguage={language.wordLanguage}
+        wordLanguage={wordLanguage}
         onStart={startStudy}
       />
     );
@@ -121,7 +139,7 @@ export function WordStudy() {
   return (
     <div className={styles.study}>
       <DailyStudyProgress
-        cefrLevel={study.cefrLevel}
+        level={study.level}
         current={displayIndex}
         total={totalWords}
         progressPercent={progressPercent}

@@ -7,6 +7,7 @@ import type { WordLanguage } from "@/types/word";
 const speechLanguageByWordLanguage: Record<WordLanguage, string> = {
   en: "en-US",
   vi: "vi-VN",
+  ja: "ja-JP",
 };
 
 export function useTextToSpeech() {

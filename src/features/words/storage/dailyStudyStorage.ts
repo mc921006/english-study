@@ -12,10 +12,14 @@ export type DailyStudyCount = 5 | 10 | 15 | 20 | "all";
 export type DailyStudy = {
   date: string;
   language: WordLanguage;
-  cefrLevel: WordStudyLevel;
+  level: WordStudyLevel;
   dailyCount: DailyStudyCount;
   words: Word[];
   currentIndex: number;
+};
+
+type LegacyDailyStudy = Partial<DailyStudy> & {
+  cefrLevel?: unknown;
 };
 
 const STORAGE_KEY = "english-study:daily-study";
@@ -73,7 +77,7 @@ function isValidStudy(study: DailyStudy) {
   return (
     typeof study.date === "string" &&
     isWordLanguage(study.language) &&
-    isWordStudyLevel(study.cefrLevel) &&
+    isWordStudyLevel(study.level) &&
     Array.isArray(study.words) &&
     Number.isInteger(study.currentIndex) &&
     study.currentIndex >= 0
@@ -89,23 +93,30 @@ function withDefaultLanguage(value: unknown): DailyStudy {
     return {
       date: "",
       language: defaultWordLanguage,
-      cefrLevel: getDefaultWordStudyLevel(defaultWordLanguage),
+      level: getDefaultWordStudyLevel(defaultWordLanguage),
       dailyCount: 5,
       words: [],
       currentIndex: 0,
     };
   }
 
-  const study = value as Partial<DailyStudy>;
+  const study = value as LegacyDailyStudy;
+  const language = isWordLanguage(study.language)
+    ? study.language
+    : defaultWordLanguage;
+  const level = isWordStudyLevel(study.level)
+    ? study.level
+    : isWordStudyLevel(study.cefrLevel)
+      ? study.cefrLevel
+      : getDefaultWordStudyLevel(language);
 
   return {
     ...study,
-    language: isWordLanguage(study.language)
-      ? study.language
-      : defaultWordLanguage,
+    language,
+    level,
   } as DailyStudy;
 }
 
 function isWordLanguage(value: unknown): value is WordLanguage {
-  return value === "en" || value === "vi";
+  return value === "en" || value === "vi" || value === "ja";
 }

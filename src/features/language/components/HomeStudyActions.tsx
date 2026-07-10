@@ -11,9 +11,9 @@ export function HomeStudyActions() {
 
   return (
     <div className={styles.actions}>
-      {availableFeatures.map((feature, index) => (
+      {availableFeatures.map((feature) => (
         <Link
-          className={index === 0 ? styles.action : styles.actionSecondary}
+          className={styles.actionSecondary}
           href={feature.href}
           key={feature.id}
         >

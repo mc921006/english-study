@@ -1,6 +1,6 @@
-# English Study
+# Language Study
 
-Next.js App Router, TypeScript, Sass modules 기반 영어 공부 웹앱입니다.
+Next.js App Router, TypeScript, Sass modules 기반 다국어 학습 웹앱입니다.
 
 ## Structure
 
@@ -47,12 +47,12 @@ pnpm dev
 1. Chrome 또는 Samsung Internet에서 `https://english-study-navy.vercel.app/`에 접속합니다.
 2. 브라우저 메뉴를 엽니다.
 3. `홈 화면에 추가` 또는 `앱 설치`를 선택합니다.
-4. 설치가 끝나면 홈 화면의 `English` 아이콘으로 실행합니다.
+4. 설치가 끝나면 홈 화면의 `Lang Study` 아이콘으로 실행합니다.
 
 ### iPhone 설치
 
 1. Safari에서 `https://english-study-navy.vercel.app/`에 접속합니다.
 2. 하단 공유 버튼을 누릅니다.
 3. `홈 화면에 추가`를 선택합니다.
-4. 이름이 `English`인지 확인하고 `추가`를 누릅니다.
-5. 홈 화면의 `English` 아이콘으로 실행합니다.
+4. 이름이 `Lang Study`인지 확인하고 `추가`를 누릅니다.
+5. 홈 화면의 `Lang Study` 아이콘으로 실행합니다.
