@@ -1,3 +1,7 @@
+"use client";
+
+import { useCallback, useEffect } from "react";
+import { useTextToSpeech } from "@/lib/useTextToSpeech";
 import type { KanaCard, KanaSet } from "../data/kanaData";
 import { KanaPronunciation } from "./KanaPronunciation";
 import { KanaWritingPractice } from "./KanaWritingPractice";
@@ -24,6 +28,18 @@ export function KanaDetail({
 }: KanaDetailProps) {
   const isFirstCard = currentIndex <= 0;
   const isLastCard = currentIndex >= totalCards - 1;
+  const { isSpeechSupported, speakText, stopSpeech } = useTextToSpeech();
+
+  useEffect(() => {
+    return stopSpeech;
+  }, [card.kana, stopSpeech]);
+
+  const playPronunciation = useCallback(
+    (nextCard: KanaCard) => {
+      speakText(nextCard.kana, "ja-JP");
+    },
+    [speakText],
+  );
 
   return (
     <div className={styles.detail}>
@@ -37,7 +53,10 @@ export function KanaDetail({
         <section className={styles.detailHero} aria-label={`${card.kana} detail`}>
           <span className={styles.detailKana}>{card.kana}</span>
           <span className={styles.detailRomanization}>{card.romanization}</span>
-          <KanaPronunciation card={card} />
+          <KanaPronunciation
+            card={card}
+            onPlay={isSpeechSupported ? playPronunciation : undefined}
+          />
         </section>
 
         <section className={styles.examplePanel} aria-label="Example word">
