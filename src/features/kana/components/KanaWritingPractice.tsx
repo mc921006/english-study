@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import styles from "./Kana.module.scss";
@@ -21,6 +22,7 @@ export function KanaWritingPractice({ kana }: KanaWritingPracticeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const strokesRef = useRef<DrawingPoint[][]>([]);
+  const [isWritingOpen, setIsWritingOpen] = useState(false);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -58,16 +60,18 @@ export function KanaWritingPractice({ kana }: KanaWritingPracticeProps) {
   }, [drawCanvas]);
 
   useEffect(() => {
-    clearDrawing();
-  }, [clearDrawing, kana]);
+    if (!isWritingOpen) {
+      return;
+    }
 
-  useEffect(() => {
+    const frame = requestAnimationFrame(drawCanvas);
     window.addEventListener("resize", drawCanvas);
 
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("resize", drawCanvas);
     };
-  }, [drawCanvas]);
+  }, [drawCanvas, isWritingOpen]);
 
   function getCanvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -120,22 +124,41 @@ export function KanaWritingPractice({ kana }: KanaWritingPracticeProps) {
       <div className={styles.writingHeader}>
         <h3>쓰기 연습</h3>
         <div className={styles.writingActions}>
-          <button className={styles.secondaryButton} type="button" onClick={clearDrawing}>
-            다시 쓰기
+          {isWritingOpen ? (
+            <button
+              className={styles.secondaryButton}
+              type="button"
+              onClick={clearDrawing}
+            >
+              다시 쓰기
+            </button>
+          ) : null}
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            aria-expanded={isWritingOpen}
+            aria-controls={`${kana}-writing-panel`}
+            onClick={() => setIsWritingOpen((value) => !value)}
+          >
+            {isWritingOpen ? "쓰기 닫기" : "쓰기"}
           </button>
         </div>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        className={styles.writingCanvas}
-        aria-label={`${kana} writing canvas`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
-        onPointerLeave={finishPointer}
-      />
+      {isWritingOpen ? (
+        <div className={styles.writingBody} id={`${kana}-writing-panel`}>
+          <canvas
+            ref={canvasRef}
+            className={styles.writingCanvas}
+            aria-label={`${kana} writing canvas`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishPointer}
+            onPointerCancel={finishPointer}
+            onPointerLeave={finishPointer}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -17,10 +17,31 @@ export function KanaStudy() {
       kanaSets.find((kanaSet) => kanaSet.id === selectedSetId) ?? kanaSets[0],
     [selectedSetId],
   );
+  const selectedCardIndex = selectedCard
+    ? selectedSet.cards.findIndex((card) => card.kana === selectedCard.kana)
+    : -1;
 
   function selectKanaSet(nextSetId: KanaSetId) {
     setSelectedSetId(nextSetId);
     setSelectedCard(null);
+  }
+
+  function selectCardAtIndex(nextIndex: number) {
+    const nextCard = selectedSet.cards[nextIndex];
+
+    if (!nextCard) {
+      return;
+    }
+
+    setSelectedCard(nextCard);
+  }
+
+  function moveToPreviousCard() {
+    selectCardAtIndex(selectedCardIndex - 1);
+  }
+
+  function moveToNextCard() {
+    selectCardAtIndex(selectedCardIndex + 1);
   }
 
   return (
@@ -64,8 +85,12 @@ export function KanaStudy() {
         {selectedCard ? (
           <KanaDetail
             card={selectedCard}
+            currentIndex={selectedCardIndex}
             kanaSet={selectedSet}
+            totalCards={selectedSet.cards.length}
             onBack={() => setSelectedCard(null)}
+            onNext={moveToNextCard}
+            onPrevious={moveToPreviousCard}
           />
         ) : (
           <KanaCardGrid
