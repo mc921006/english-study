@@ -22,6 +22,7 @@ type ConversationAnswerRequest = {
 };
 
 const PREVIOUS_QUESTION_LIMIT = 12;
+const DEFAULT_CONVERSATION_FEEDBACK_MODEL = "tencent/hy3:free";
 
 export async function POST(request: Request) {
   try {
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
     );
     const result = await generateJsonWithAI({
       requireOpenRouter: true,
+      model:
+        process.env.OPENROUTER_CONVERSATION_FEEDBACK_MODEL ??
+        DEFAULT_CONVERSATION_FEEDBACK_MODEL,
       maxTokens: 1800,
       messages: [
         {
@@ -55,12 +59,14 @@ export async function POST(request: Request) {
             "Write goodPoint in Korean.",
             "Write grammarCorrection in Korean and explain exactly what is wrong and why.",
             "Write vocabularyCorrection in Korean when it is not null.",
+            "vocabularyCorrection must be one Korean string or null. Never return an array for vocabularyCorrection.",
             "If the answer has an unnatural word choice, noun form, preposition, or collocation, explain it in vocabularyCorrection instead of returning null.",
             "For example, if the learner writes 'play game', explain that 'play games' is more natural.",
             "Write koreanExplanation in Korean.",
             "Write nextTip in Korean.",
             "If there is no vocabulary issue, set vocabularyCorrection to null.",
             "correctedSentence must be a direct correction of the user's sentence.",
+            "correctedSentence must fix both grammar and vocabulary mistakes instead of preserving unnatural word choices.",
             "betterExpression must be a more natural English version that the learner can reuse.",
             "nextQuestion must naturally continue the same topic using the previous question and user answer.",
             "nextQuestion must be one English question and must not repeat the current question.",
@@ -94,7 +100,11 @@ export async function POST(request: Request) {
           properties: {
             goodPoint: { type: "string" },
             grammarCorrection: { type: "string" },
-            vocabularyCorrection: { type: ["string", "null"] },
+            vocabularyCorrection: {
+              type: ["string", "null"],
+              description:
+                "One Korean string explaining vocabulary issues, or null when there is no vocabulary issue. Never an array.",
+            },
             correctedSentence: { type: "string" },
             betterExpression: { type: "string" },
             koreanExplanation: { type: "string" },
@@ -117,11 +127,22 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!isConversationFeedback(result)) {
+    const feedback = normalizeConversationFeedback(result);
+
+    if (!feedback) {
       throw new Error("AI response had an invalid shape.");
     }
 
-    return NextResponse.json({ feedback: result });
+    return NextResponse.json({
+      feedback: {
+        ...feedback,
+        nextQuestion: cleanGeneratedText(feedback.nextQuestion, "nextQuestion"),
+        nextQuestionTranslation: cleanGeneratedText(
+          feedback.nextQuestionTranslation,
+          "nextQuestionTranslation",
+        ),
+      },
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Request failed." },
@@ -212,25 +233,102 @@ function formatPreviousQuestions(questions: string[]) {
     .join("\n");
 }
 
-function isConversationFeedback(value: unknown): value is ConversationFeedback {
+function normalizeConversationFeedback(
+  value: unknown,
+): ConversationFeedback | null {
   if (!value || typeof value !== "object") {
-    return false;
+    return null;
   }
 
   const feedback = value as Partial<
     Record<keyof ConversationFeedback, unknown>
   >;
-
-  return (
-    typeof feedback.goodPoint === "string" &&
-    typeof feedback.grammarCorrection === "string" &&
-    (typeof feedback.vocabularyCorrection === "string" ||
-      feedback.vocabularyCorrection === null) &&
-    typeof feedback.correctedSentence === "string" &&
-    typeof feedback.betterExpression === "string" &&
-    typeof feedback.koreanExplanation === "string" &&
-    typeof feedback.nextTip === "string" &&
-    typeof feedback.nextQuestion === "string" &&
-    typeof feedback.nextQuestionTranslation === "string"
+  const goodPoint = normalizeRequiredString(feedback.goodPoint);
+  const grammarCorrection = normalizeRequiredString(feedback.grammarCorrection);
+  const vocabularyCorrection = normalizeVocabularyCorrection(
+    feedback.vocabularyCorrection,
   );
+  const correctedSentence = normalizeRequiredString(feedback.correctedSentence);
+  const betterExpression = normalizeRequiredString(feedback.betterExpression);
+  const koreanExplanation = normalizeRequiredString(feedback.koreanExplanation);
+  const nextTip = normalizeRequiredString(feedback.nextTip);
+  const nextQuestion = normalizeRequiredString(feedback.nextQuestion);
+  const nextQuestionTranslation = normalizeRequiredString(
+    feedback.nextQuestionTranslation,
+  );
+
+  if (
+    !goodPoint ||
+    !grammarCorrection ||
+    vocabularyCorrection === undefined ||
+    !correctedSentence ||
+    !betterExpression ||
+    !koreanExplanation ||
+    !nextTip ||
+    !nextQuestion ||
+    !nextQuestionTranslation
+  ) {
+    return null;
+  }
+
+  return {
+    goodPoint,
+    grammarCorrection,
+    vocabularyCorrection,
+    correctedSentence,
+    betterExpression,
+    koreanExplanation,
+    nextTip,
+    nextQuestion,
+    nextQuestionTranslation,
+  };
+}
+
+function normalizeRequiredString(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const text = value.trim();
+
+  return text.length > 0 ? text : null;
+}
+
+function normalizeVocabularyCorrection(value: unknown) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const text = value.trim();
+
+    return text.length > 0 ? text : null;
+  }
+
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+    const text = value
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join(" ");
+
+    return text.length > 0 ? text : null;
+  }
+
+  return undefined;
+}
+
+function cleanGeneratedText(value: string, fieldName: string) {
+  const text = value.trim();
+
+  if (
+    /[{}]/.test(text) ||
+    /JSON_/i.test(text) ||
+    /"?(?:question|translation|nextQuestion|nextQuestionTranslation)"?\s*:/i.test(
+      text,
+    )
+  ) {
+    throw new Error(`AI response included invalid JSON fragments in ${fieldName}.`);
+  }
+
+  return text;
 }

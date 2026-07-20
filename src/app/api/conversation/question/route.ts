@@ -81,8 +81,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      question: result.question.trim(),
-      translation: result.translation.trim(),
+      question: cleanGeneratedText(result.question, "question"),
+      translation: cleanGeneratedText(result.translation, "translation"),
     });
   } catch (error) {
     return NextResponse.json(
@@ -153,4 +153,22 @@ function isConversationQuestionResponse(value: unknown): value is {
     typeof (value as { question?: unknown }).question === "string" &&
     typeof (value as { translation?: unknown }).translation === "string"
   );
+}
+
+function cleanGeneratedText(value: string, fieldName: string) {
+  const text = value.trim();
+
+  if (
+    /[{}]/.test(text) ||
+    /JSON_/i.test(text) ||
+    /"?(?:question|translation|nextQuestion|nextQuestionTranslation)"?\s*:/i.test(
+      text,
+    )
+  ) {
+    throw new Error(
+      `AI response included invalid JSON fragments in ${fieldName}.`,
+    );
+  }
+
+  return text;
 }
